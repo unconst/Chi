@@ -907,7 +907,9 @@ async def verify_miner_container(miner_uid: int):
 
 ### Agent/Environment Subnets: Use Basilica
 
-**For subnets where miners submit executable code** (agents, trading bots, evaluation environments, task solvers), validators should **run the miner's code themselves** rather than querying miner endpoints.
+**For subnets where miners submit executable code** (agents, trading bots, evaluation environments, task solvers, optimization algorithms, game-playing bots, etc.), validators should **run the miner's code themselves** rather than querying miner endpoints.
+
+**Rule of thumb:** If miners are competing on **the quality of software they write** (not the hardware they run), use containers. Examples: TSP solvers, chess engines, code generators, any "solve this problem" subnet.
 
 The correct pattern:
 1. Miners build Docker images with their agent/environment

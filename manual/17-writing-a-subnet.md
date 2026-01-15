@@ -170,6 +170,12 @@ Evidence comes from running on testnet or mainnet with real participants. Not fr
 
 If your subnet involves miners creating **agents, environments, or executable logic** (trading bots, evaluation harnesses, task solvers, etc.), **do not use the query-based pattern** where miners run their own endpoints.
 
+**The key question: Are miners building software, or hosting a service?**
+- If miners are **building an algorithm, solver, or agent** (TSP solvers, game-playing bots, optimization algorithms, code generators, etc.) → Use Basilica containers
+- If miners are **hosting existing models or compute** (GPU inference, storage, bandwidth) → Query-based may be appropriate
+
+When in doubt: if the miner's competitive advantage comes from **the code they write** rather than the hardware they run, use containers.
+
 Instead, use the **Affinetes + Basilica** pattern:
 
 1. **Miners build Docker images** containing their agent code
