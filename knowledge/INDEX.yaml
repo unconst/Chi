@@ -39,6 +39,7 @@ files_by_category:
     chutes.integration.yaml: "SN64 LLM inference API"
     basilica.containers.yaml: "container execution for agent subnets"
     hippius.integration.yaml: "SN13 decentralized storage, S3/IPFS, provenance"
+    desearch.integration.yaml: "SN22 real-time search, Twitter/Reddit/web data"
     sdk.quick_reference.yaml: "Python SDK patterns, token trading"
     btcli.reference.yaml: "CLI command reference"
     local.development.yaml: "local subtensor setup"
@@ -98,6 +99,17 @@ task_routing:
       - provenance_verification
       - large_file_distribution
 
+  desearch_real_time:
+    load:
+      - desearch.integration.yaml
+      - validator.contract.yaml
+    use_when:
+      - real_time_social_signals
+      - live_twitter_reddit_data
+      - agent_context_enrichment
+      - event_verification
+      - sentiment_analysis
+
   cli_operations:
     load:
       - btcli.reference.yaml
@@ -118,3 +130,4 @@ critical_doctrines:
   - "Commit-reveal weights: mature subnet tool only"
   - "Containers required when miners compete on software"
   - "Provenance via Hippius: timestamp data to prove temporal ordering"
+  - "Real-time data via Desearch: live Twitter/Reddit/web for agent reasoning"

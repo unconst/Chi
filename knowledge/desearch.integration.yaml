@@ -1,0 +1,348 @@
+# Desearch Integration Reference
+# SN22 - Real-time search and scraping layer for agents
+
+overview:
+  what: "Real-time search API providing live data from X (Twitter), Reddit, and web"
+  provides:
+    - twitter_search
+    - reddit_search
+    - web_search
+    - ai_powered_search
+    - sentiment_analysis
+    - real_time_monitoring
+  
+  api_endpoint: "https://api.desearch.ai"
+  console: "https://desearch.ai"
+  docs: "https://docs.desearch.ai"
+
+use_cases:
+  real_time_signals:
+    purpose: "fetch live social/web data for agent reasoning"
+    benefit:
+      - no_scraping_infrastructure
+      - no_crawler_maintenance
+      - decentralized_via_sn22
+    
+    when_to_use:
+      - subnet_depends_on_real_world_events
+      - agents_need_fresh_social_data
+      - static_rag_not_sufficient
+      - live_market_sentiment_analysis
+
+  validator_ground_truth:
+    purpose: "use live data as ground truth source"
+    pattern: |
+      # Validator fetches real-time data for evaluation
+      # Miners must reason about current events
+      # Ground truth derived from live sources
+
+  agent_context_enrichment:
+    purpose: "enrich LLM context with live information"
+    benefit:
+      - agents_reason_over_current_data
+      - not_limited_to_training_cutoff
+      - fresh_web_context
+
+authentication:
+  api_key:
+    creation: |
+      # 1. Sign up at https://desearch.ai
+      # 2. Navigate to API Dashboard
+      # 3. Generate API key
+    
+    usage_in_headers:
+      Authorization: "<YOUR_API_KEY>"
+      Content-Type: "application/json"
+
+sdk_installation: |
+  pip install desearch-py
+
+endpoints:
+  ai_search:
+    url: "POST https://api.desearch.ai/desearch/ai/search"
+    purpose: "AI-powered multi-source search"
+    tools_available:
+      - twitter
+      - reddit
+      - web
+    
+    code: |
+      import requests
+      
+      async def ai_search(prompt: str, api_key: str, tools: list = None) -> dict:
+          """AI-powered search across multiple sources."""
+          if tools is None:
+              tools = ["twitter", "reddit", "web"]
+          
+          payload = {
+              "prompt": prompt,
+              "tools": tools,
+              "model": "NOVA",
+              "date_filter": "PAST_WEEK",
+              "streaming": False
+          }
+          
+          response = requests.post(
+              "https://api.desearch.ai/desearch/ai/search",
+              headers={
+                  "Authorization": api_key,
+                  "Content-Type": "application/json"
+              },
+              json=payload
+          )
+          return response.json()
+
+  basic_twitter_search:
+    url: "GET https://api.desearch.ai/twitter"
+    purpose: "Direct Twitter search with filters"
+    
+    code: |
+      import requests
+      
+      async def search_twitter(
+          query: str,
+          api_key: str,
+          count: int = 10,
+          sort: str = "Top",
+          start_date: str = None,
+          end_date: str = None,
+          lang: str = "en"
+      ) -> dict:
+          """Basic Twitter search with filters."""
+          params = {
+              "query": query,
+              "count": count,
+              "sort": sort,
+              "lang": lang,
+              "blue_verified": False,
+              "is_image": False,
+              "is_video": False,
+              "min_likes": 0,
+              "min_replies": 0,
+              "min_retweets": 0
+          }
+          if start_date:
+              params["start_date"] = start_date
+          if end_date:
+              params["end_date"] = end_date
+          
+          response = requests.get(
+              "https://api.desearch.ai/twitter",
+              headers={"Authorization": api_key},
+              params=params
+          )
+          return response.json()
+
+  ai_twitter_links:
+    url: "POST https://api.desearch.ai/desearch/ai/search/links/twitter"
+    purpose: "AI-powered Twitter link discovery"
+    
+    code: |
+      import requests
+      
+      async def ai_twitter_search(prompt: str, api_key: str) -> dict:
+          """AI-powered Twitter search using NOVA model."""
+          payload = {
+              "model": "NOVA",
+              "prompt": prompt
+          }
+          
+          response = requests.post(
+              "https://api.desearch.ai/desearch/ai/search/links/twitter",
+              headers={
+                  "Authorization": api_key,
+                  "accept": "application/json",
+                  "Content-Type": "application/json"
+              },
+              json=payload
+          )
+          return response.json()
+
+  reddit_search:
+    url: "POST https://api.desearch.ai/desearch/ai/search"
+    purpose: "Search Reddit discussions"
+    
+    code: |
+      import requests
+      
+      async def search_reddit(prompt: str, api_key: str) -> dict:
+          """Search Reddit for discussions matching prompt."""
+          payload = {
+              "prompt": prompt,
+              "tools": ["reddit"],
+              "model": "NOVA",
+              "date_filter": "PAST_WEEK",
+              "streaming": False
+          }
+          
+          response = requests.post(
+              "https://api.desearch.ai/desearch/ai/search",
+              headers={
+                  "Authorization": api_key,
+                  "Content-Type": "application/json"
+              },
+              json=payload
+          )
+          
+          data = response.json()
+          return data.get("reddit_search") or data.get("reddit_search_results", [])
+
+sdk_usage:
+  basic_example: |
+    from desearch_py import Desearch
+    import os
+    
+    desearch = Desearch(api_key=os.getenv("DESEARCH_API_KEY"))
+    
+    # AI-powered Twitter search
+    ai_results = desearch.twitter_links_search(
+        prompt="Bittensor subnet updates",
+        count=10
+    )
+    
+    # Basic Twitter search with filters
+    basic_results = desearch.basic_twitter_search(
+        query="Bittensor",
+        sort="Top",
+        start_date="2025-01-01",
+        end_date="2025-01-15",
+        lang="en",
+        min_likes=5,
+        count=20
+    )
+
+rate_limits:
+  dimensions:
+    - requests_per_minute_rpm
+    - requests_per_day_rpd
+    - requests_per_month_rpmn
+  
+  note: |
+    Limits vary by tier. Check Desearch Console for your specific limits.
+    Monitor usage at https://desearch.ai dashboard.
+
+date_filters:
+  options:
+    - "PAST_24_HOURS"
+    - "PAST_WEEK"
+    - "PAST_MONTH"
+    - "PAST_YEAR"
+  
+  custom: |
+    Use start_date and end_date params for precise control
+    Format: "YYYY-MM-DD"
+
+models:
+  NOVA:
+    purpose: "general AI-powered search"
+    use_for: "most search queries"
+  
+  ORBIT:
+    purpose: "enhanced context understanding"
+  
+  HORIZON:
+    purpose: "broader search scope"
+
+validator_integration:
+  real_time_ground_truth: |
+    async def get_live_ground_truth(topic: str, api_key: str) -> dict:
+        """Fetch live data as ground truth for evaluation."""
+        from desearch_py import Desearch
+        
+        desearch = Desearch(api_key=api_key)
+        
+        # Get current Twitter sentiment
+        twitter_data = desearch.twitter_links_search(
+            prompt=f"Current news and sentiment about {topic}",
+            count=20
+        )
+        
+        # Get Reddit discussions
+        # Using AI search with reddit tool
+        import requests
+        reddit_resp = requests.post(
+            "https://api.desearch.ai/desearch/ai/search",
+            headers={
+                "Authorization": api_key,
+                "Content-Type": "application/json"
+            },
+            json={
+                "prompt": f"What are people saying about {topic}?",
+                "tools": ["reddit"],
+                "model": "NOVA",
+                "date_filter": "PAST_24_HOURS"
+            }
+        )
+        
+        return {
+            "twitter": twitter_data,
+            "reddit": reddit_resp.json(),
+            "timestamp": time.time()
+        }
+  
+  event_verification: |
+    async def verify_real_world_event(claim: str, api_key: str) -> bool:
+        """Verify a claim against live web data."""
+        from desearch_py import Desearch
+        import requests
+        
+        # Search multiple sources
+        response = requests.post(
+            "https://api.desearch.ai/desearch/ai/search",
+            headers={
+                "Authorization": api_key,
+                "Content-Type": "application/json"
+            },
+            json={
+                "prompt": f"Is this true: {claim}",
+                "tools": ["twitter", "reddit", "web"],
+                "model": "NOVA",
+                "date_filter": "PAST_24_HOURS"
+            }
+        )
+        
+        results = response.json()
+        # Analyze results for verification
+        return results
+
+architecture_patterns:
+  pattern_a:
+    name: "live context for agent reasoning"
+    flow: "agent → Desearch → fresh data → LLM → action"
+    use_case: "agents needing current information"
+  
+  pattern_b:
+    name: "real-time ground truth"
+    flow: "validator → Desearch → live data → evaluate miner response"
+    use_case: "subnets where truth changes rapidly"
+  
+  pattern_c:
+    name: "sentiment monitoring"
+    flow: "agent → Desearch → Twitter/Reddit → sentiment analysis → decision"
+    use_case: "market sentiment, social signals"
+
+environment_setup: |
+  export DESEARCH_API_KEY=your_api_key_here
+  
+  # Or in code:
+  from desearch_py import Desearch
+  desearch = Desearch(api_key="your_api_key_here")
+
+best_practices:
+  for_validators:
+    - cache_results_when_appropriate
+    - use_date_filters_for_relevance
+    - combine_sources_for_verification
+    - rate_limit_aware_batching
+  
+  for_agents:
+    - use_ai_search_for_complex_queries
+    - filter_by_engagement_for_quality
+    - verify_across_multiple_sources
+    - handle_rate_limits_gracefully
+
+cost_mitigation:
+  - batch_related_queries
+  - cache_results_when_freshness_allows
+  - use_date_filters_to_narrow_scope
+  - monitor_usage_in_console
