@@ -1,4 +1,6 @@
-![voibes](voibes.jpeg)
+<p align="center">
+  <img src="voibes.jpeg" alt="voibes">
+</p>
 
 # CHi: A Vibe-Codable Bittensor Subnet Template.
 
