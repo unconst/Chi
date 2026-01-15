@@ -41,6 +41,9 @@ This guide is designed for LLMs and developers who need to:
 ### Getting Started with This Template
 17. **[16-how-to-use-template.md](16-how-to-use-template.md)** - Step-by-step guide to creating a subnet using this repository
 
+### External Integrations
+18. **[18-chutes-integration.md](18-chutes-integration.md)** - Integrating Chutes (SN64) for LLM inference, miner model deployment, TEE, and free validator queries
+
 ## Key Insights
 
 ### Mechanism Architecture Diversity
@@ -76,6 +79,16 @@ Miners commit connection info to chain (API endpoints, S3 URLs, database endpoin
 - Miners implement their own solutions based on your specification
 - Single-file validators are easier to audit, understand, and maintain
 
+### Leverage the Ecosystem
+
+**In practice, subnets on Bittensor should always try to use other subnets.** Don't reinvent infrastructure that already exists in the network:
+
+- **Model Training/Inference**: If miners are training models, have them upload to [Chutes (SN64)](18-chutes-integration.md) and commit the Chutes endpoint to the chain. Validators query Chutes rather than miners directly.
+- **Decentralized Storage**: If you need decentralized storage, use [Hippius](https://hippius.com) rather than building your own storage layer.
+- **Other Specialized Subnets**: Check what other subnets offer before building infrastructure from scratch.
+
+This creates ecosystem synergy—your subnet benefits from the security and reliability of established subnets, and you focus only on what makes your measurement unique.
+
 ### Hyperparameter Reality
 
 **Not all hyperparameters are changeable** even though they appear in docs:
@@ -107,6 +120,9 @@ Read document 17 first (what am I measuring?), then 15 (validator-only rule), th
 
 ### "How do I make a subnet with this repository?"
 Read document 16 for the complete step-by-step walkthrough
+
+### "How do I integrate Chutes for LLM validation?"
+Read document 18 for Chutes integration patterns, TEE, and validator-free queries
 
 ## Code Anchors (Where Truth Lives)
 
