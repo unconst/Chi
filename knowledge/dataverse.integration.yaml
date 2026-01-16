@@ -1,0 +1,349 @@
+# Data Universe Integration Reference
+# SN13 - Decentralized social data for Bittensor subnets
+
+overview:
+  what: "Decentralized data collection network for social media"
+  provides:
+    - real_time_social_queries
+    - x_twitter_data
+    - reddit_data
+    - on_demand_retrieval
+    - bulk_gravity_collection
+    - parquet_dataset_exports
+
+  key_feature: |
+    Query real-time social data from X/Twitter and Reddit through a
+    decentralized miner network - no scraping infrastructure needed.
+    Data is validator-verified for quality assurance.
+
+use_cases:
+  real_time_sentiment:
+    purpose: "Get current social sentiment for scoring or context"
+    benefit:
+      - instant_results_in_seconds
+      - up_to_1000_posts_per_query
+      - keyword_and_user_filtering
+      - no_api_keys_for_social_platforms
+
+    code: |
+      from macrocosmos import Macrocosmos
+
+      async def get_sentiment_data(topic: str) -> list:
+          client = Macrocosmos(api_key="your-api-key")
+
+          # Query X/Twitter for topic mentions
+          tweets = client.sn13.on_demand.get_posts(
+              source="X",
+              keywords=[topic],
+              limit=100,
+              keyword_mode="any"
+          )
+
+          return tweets
+
+  validator_context_retrieval:
+    purpose: "Fetch social context for validation tasks"
+    benefit:
+      - real_time_data_access
+      - no_local_scrapers_needed
+      - verified_data_quality
+
+    code: |
+      from macrocosmos import Macrocosmos
+
+      async def get_context_for_validation(
+          usernames: list[str],
+          keywords: list[str]
+      ) -> list:
+          client = Macrocosmos(api_key="your-api-key")
+
+          # Get recent posts from specific users
+          context = client.sn13.on_demand.get_posts(
+              source="X",
+              usernames=usernames,  # up to 5
+              keywords=keywords,     # up to 5
+              limit=500
+          )
+
+          return context
+
+  large_scale_dataset_collection:
+    purpose: "Collect large datasets for model training or research"
+    benefit:
+      - continuous_collection_up_to_7_days
+      - parquet_file_output
+      - unlimited_data_volume
+      - email_notifications
+      - auto_builds_dataset_after_completion
+
+    code: |
+      from macrocosmos.gravity import GravityClient
+
+      async def collect_training_data() -> str:
+          gravity = GravityClient(api_key="your-api-key")
+
+          # Start large-scale collection (runs up to 7 days)
+          task = gravity.CreateGravityTask(
+              gravity_tasks=[
+                  {"topic": "#artificialintelligence", "platform": "x"},
+                  {"keyword": "bittensor", "platform": "x"},
+                  {"topic": "r/MachineLearning", "platform": "reddit"}
+              ],
+              name="AI Training Dataset",
+              notification_requests=[{
+                  "type": "email",
+                  "address": "notify@example.com"
+              }]
+          )
+
+          return task.id
+
+      async def check_and_download(task_id: str) -> list:
+          gravity = GravityClient(api_key="your-api-key")
+
+          # Check progress
+          status = gravity.GetGravityTasks(
+              gravity_task_id=task_id,
+              include_crawlers=True
+          )
+
+          # When ready, build dataset (or wait for auto-build after 7 days)
+          dataset = gravity.BuildDataset(
+              crawler_id=status.crawlers[0].id,
+              max_rows=50000
+          )
+
+          # Get download URLs
+          result = gravity.GetDataset(dataset_id=dataset.id)
+          return result.download_urls  # Parquet files
+
+  reddit_subreddit_monitoring:
+    purpose: "Track discussions in specific communities"
+
+    code: |
+      from macrocosmos import Macrocosmos
+
+      async def monitor_subreddit(subreddit: str, keywords: list) -> list:
+          client = Macrocosmos(api_key="your-api-key")
+
+          # First keyword must be subreddit for Reddit
+          posts = client.sn13.on_demand.get_posts(
+              source="REDDIT",
+              keywords=[subreddit] + keywords,  # e.g., ["r/bittensor", "subnet"]
+              limit=200
+          )
+
+          return posts
+
+authentication:
+  api_key:
+    creation: "https://app.macrocosmos.ai/account?tab=api-keys"
+
+    usage: |
+      from macrocosmos import Macrocosmos
+
+      client = Macrocosmos(api_key="your-api-key")
+
+    environment: |
+      export MC_API="your-api-key"
+
+  rate_limits:
+    standard: "100 requests/hour"
+    validator: "1000 requests/hour"
+
+mcp_integration:
+  purpose: "Direct integration with Claude Desktop or Cursor"
+
+  setup_claude_desktop: |
+    # Edit ~/Library/Application Support/Claude/claude_desktop_config.json
+    {
+      "mcpServers": {
+        "macrocosmos": {
+          "command": "uvx",
+          "args": ["macrocosmos-mcp"],
+          "env": {
+            "MC_API": "<your-api-key>"
+          }
+        }
+      }
+    }
+
+  setup_cursor: |
+    # Settings → MCP settings → Add New Global MCP Server
+    # Use same config as Claude Desktop
+
+  available_tools:
+    query_on_demand_data: "Real-time X/Reddit queries (up to 1000 results)"
+    create_gravity_task: "Start large-scale collection"
+    get_gravity_task_status: "Monitor collection progress"
+    build_dataset: "Generate parquet files from collection"
+    get_dataset_status: "Get download links for datasets"
+    cancel_gravity_task: "Stop collection (purges data)"
+
+  example_prompts:
+    - "What has @elonmusk been posting about today?"
+    - "Get me the latest posts from r/bittensor about dTAO"
+    - "Fetch 50 tweets about #AI from the last week"
+    - "Start collecting tweets about bittensor"
+
+on_demand_api:
+  endpoint: "https://sn13.api.macrocosmos.ai/api/v1/on_demand_data_request"
+
+  parameters:
+    source: "X or REDDIT (required, case-sensitive)"
+    usernames: "Up to 5 (X only, @ optional)"
+    keywords: "Up to 5"
+    start_date: "ISO format (default: 24h ago)"
+    end_date: "ISO format (default: now)"
+    limit: "1-1000 (default: 10)"
+    keyword_mode: "'any' or 'all' (default: any)"
+
+  platform_differences:
+    x_twitter:
+      - supports_username_filtering
+      - supports_keyword_search
+
+    reddit:
+      - no_username_filtering
+      - first_keyword_is_subreddit
+      - supports_keyword_search
+
+gravity_api:
+  purpose: "Large-scale collection for datasets exceeding 1000 results"
+  duration: "Tasks can run up to 7 days, then auto-build dataset"
+
+  task_formats:
+    x_twitter:
+      - topic: '{"topic": "#bitcoin", "platform": "x"}'
+      - keyword: '{"keyword": "bittensor", "platform": "x"}'
+    reddit:
+      - subreddit: '{"topic": "r/MachineLearning", "platform": "reddit"}'
+
+  workflow: |
+    1. CreateGravityTask → starts collection on miner network
+    2. GetGravityTasks → monitor progress
+    3. BuildDataset → generate parquet (or wait for auto-build)
+    4. GetDataset → download URLs
+
+  note: |
+    Tasks register on the network within ~20 minutes.
+    After 7 days, dataset builds automatically and you get notified.
+    Building manually stops the crawler.
+
+  code: |
+    from macrocosmos.gravity import GravityClient, AsyncGravityClient
+
+    # Synchronous
+    gravity = GravityClient(api_key="your-api-key")
+
+    # Async
+    gravity = AsyncGravityClient(api_key="your-api-key")
+
+data_format:
+  output: "Parquet files"
+
+  x_twitter_fields:
+    - username
+    - text
+    - url
+    - timestamp
+    - tweet_hashtags
+    - media_urls
+    - like_count
+    - retweet_count
+    - reply_count
+    - view_count
+
+  reddit_fields:
+    - username
+    - body
+    - title
+    - subreddit
+    - timestamp
+    - data_type  # "post" or "comment"
+    - score
+    - upvote_ratio
+    - num_comments
+
+validator_integration:
+  fetching_context: |
+    async def get_social_context(query: str) -> list:
+        """Fetch social context for validation."""
+        from macrocosmos import Macrocosmos
+
+        client = Macrocosmos(api_key="your-api-key")
+
+        # Quick lookup for scoring context
+        results = client.sn13.on_demand.get_posts(
+            source="X",
+            keywords=[query],
+            limit=50
+        )
+
+        return results
+
+  batch_queries: |
+    async def batch_social_queries(topics: list[str]) -> dict:
+        """Query multiple topics efficiently."""
+        from macrocosmos import Macrocosmos
+
+        client = Macrocosmos(api_key="your-api-key")
+        results = {}
+
+        for topic in topics:
+            results[topic] = client.sn13.on_demand.get_posts(
+                source="X",
+                keywords=[topic],
+                limit=100
+            )
+
+        return results
+
+miner_integration:
+  providing_data: |
+    # Miners don't call the API directly
+    # They run scrapers and serve data to validators
+    # See data-universe repo for miner setup
+
+cli_quick_reference:
+  install: "pip install macrocosmos"
+
+  python_usage: |
+    from macrocosmos import Macrocosmos
+    from macrocosmos.gravity import GravityClient
+
+    # On-demand queries
+    client = Macrocosmos(api_key="key")
+    tweets = client.sn13.on_demand.get_posts(source="X", keywords=["ai"])
+
+    # Gravity large-scale collection
+    gravity = GravityClient(api_key="key")
+    task = gravity.CreateGravityTask(gravity_tasks=[...])
+
+sdk_installation: |
+  pip install macrocosmos
+  # Or
+  uv add macrocosmos
+
+best_practices:
+  on_demand:
+    - use_for_quick_lookups_under_1000
+    - batch_requests_when_possible
+    - cache_results_for_repeated_queries
+    - use_keyword_mode_any_for_broader_results
+
+  gravity:
+    - use_for_large_scale_collection
+    - set_up_email_notifications
+    - can_build_early_or_wait_for_auto_build
+    - use_topic_for_hashtags_keyword_for_plain_text
+
+  general:
+    - use_mcp_for_interactive_exploration
+    - parquet_for_large_dataset_processing
+
+cost_mitigation:
+  - batch_on_demand_requests
+  - use_gravity_for_large_volumes
+  - cache_frequently_accessed_data
+
