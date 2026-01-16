@@ -1,0 +1,324 @@
+# Example: Affine (SN120)
+# Incentivized RL environment for reasoning model improvement
+# Pattern: container_execution + multi-environment Pareto scoring
+
+metadata:
+  name: affine
+  subnet: 120
+  repo: "https://github.com/AffineFoundation/affine-cortex"
+  category: reasoning_rl
+  patterns_used:
+    - container_execution  # miners deploy models as containers
+    - prediction_market    # delayed scoring after evaluation
+  integrations:
+    - chutes              # SN64 for model hosting and inference
+
+# ===========================================================================
+# WHAT IS BEING MEASURED
+# ===========================================================================
+
+measurement:
+  one_sentence: "Reasoning model quality across multiple RL environments"
+  commodity: software  # → container_execution pattern
+  
+  detail: |
+    Affine measures which model performs best on program reasoning tasks
+    (deduction, abduction, SAT solving). Unlike single-task subnets,
+    Affine requires dominance across ALL environments simultaneously.
+
+# ===========================================================================
+# MECHANISM OVERVIEW
+# ===========================================================================
+
+mechanism:
+  summary: |
+    Miners submit models to Chutes (SN64) for inference hosting.
+    Validators evaluate all models on multiple RL environments.
+    Only models on the Pareto frontier earn rewards.
+    Winners-take-all forces convergence + improvement cycle.
+
+  flow:
+    miner:
+      1_train: "Train/improve reasoning model locally"
+      2_upload: "Push model to Hugging Face (get commit SHA)"
+      3_deploy: "Deploy to Chutes via `af chutes_push`"
+      4_commit: "Commit model info on-chain via `af commit`"
+    
+    validator:
+      1_discover: "Read miner commitments from chain"
+      2_evaluate: "Query each model on all RL environments"
+      3_score: "Compute ε-Pareto dominance across environments"
+      4_weight: "Set weights using winners-take-all over subsets"
+
+# ===========================================================================
+# RL ENVIRONMENTS
+# ===========================================================================
+
+environments:
+  DED:
+    name: "Program Deduction"
+    task: "Given specification + test cases, write correct program"
+    reasoning_type: deductive
+    verification: "Execute program, check test case pass rate"
+  
+  ABD:
+    name: "Program Abduction"
+    task: "Given input/output pairs, infer the transformation function"
+    reasoning_type: abductive
+    verification: "Apply inferred function, check output matches"
+  
+  SAT:
+    name: "k-SAT Solving"
+    task: "Solve synthetic satisfiability problems"
+    reasoning_type: logical
+    verification: "Check if solution satisfies all clauses"
+
+  execution:
+    sandboxed: true
+    docker_images: "affinefoundation/affine-env:v4"
+    limits:
+      cpu: capped
+      memory: capped
+      wall_clock: capped
+      output_size: capped
+
+# ===========================================================================
+# SCORING: ε-PARETO DOMINANCE
+# ===========================================================================
+
+scoring:
+  concept: |
+    A model A dominates model B if:
+    - A is not worse than B on ANY environment (within ε tolerance)
+    - A is strictly better than B on at least ONE environment
+    
+    The Pareto frontier is the set of non-dominated models.
+    Only frontier models receive emissions.
+
+  epsilon_tolerance:
+    purpose: "Statistical robustness against noise"
+    method: "Based on standard error of measurements"
+  
+  winners_take_all_subsets:
+    description: |
+      For each non-empty subset S of environments, the model that
+      dominates on S receives a score K_s. Scores are scaled by
+      subset size and normalized across miners.
+    
+    formula: |
+      For each subset S:
+        winner = model that ε-dominates all others on S
+        score[winner] += K_|S|  # scaled by subset cardinality
+      
+      final_weight = softmax(score)
+  
+  eligibility:
+    min_samples: "Minimum evaluations per environment required"
+    min_accuracy: "Baseline accuracy threshold to qualify"
+    
+  window:
+    type: rolling
+    blocks: "Recent block window (tail)"
+    purpose: "Reward recent performance, allow improvement"
+
+# ===========================================================================
+# ANTI-GAMING PROPERTIES
+# ===========================================================================
+
+anti_gaming:
+  sybil_proof:
+    mechanism: "Pareto dominance natural deduplication"
+    explanation: |
+      Multiple identities with same model don't help.
+      Only the frontier model wins. Copies tie with original.
+      No benefit from N hotkeys running identical model.
+  
+  copy_proof:
+    mechanism: "Copy = tie, improvement required to win"
+    explanation: |
+      Copying the current best model gives you equal performance.
+      Equal performance under ε-Pareto means NO dominance.
+      You must IMPROVE to dominate and earn emissions.
+  
+  overfitting_proof:
+    mechanism: "Multi-environment requirement"
+    explanation: |
+      Optimizing for one environment hurts others.
+      Must dominate on ALL environments to be on frontier.
+      Forces general reasoning ability, not narrow memorization.
+  
+  decoy_proof:
+    mechanism: "Actual evaluation required"
+    explanation: |
+      Models are actually executed on tasks.
+      Empty or non-functional models score zero.
+      No reward without demonstrated capability.
+
+# ===========================================================================
+# CHUTES INTEGRATION (SN64)
+# ===========================================================================
+
+chutes_integration:
+  purpose: "Model hosting and inference load balancing"
+  pattern: capacity_market
+  
+  miner_deploys:
+    command: "af chutes_push --repo <user/repo> --revision <sha>"
+    result: "Model becomes available via Chutes API"
+    endpoint: "OpenAI-compatible at llm.chutes.ai"
+  
+  validator_queries:
+    method: "HTTP to Chutes-hosted model endpoints"
+    authentication: "CHUTES_API_KEY"
+    cost: "Inference costs on validators (unusual - see note)"
+  
+  note: |
+    Affine pushes some compute to validators (evaluation).
+    This is acceptable because:
+    1. Evaluation is the core validator function
+    2. Inference is hosted on Chutes (miner infrastructure)
+    3. Validators only make API calls, not run models locally
+
+# ===========================================================================
+# ON-CHAIN MECHANICS
+# ===========================================================================
+
+chain:
+  miner_commitment:
+    content:
+      - huggingface_repo
+      - revision_sha
+      - chute_id
+    command: "af commit --repo <repo> --revision <sha> --chute-id <id>"
+    rate_limit: "1 per ~100 blocks (chain commitment limit)"
+  
+  weight_setting:
+    method: "subtensor.set_weights via signer service"
+    format: "Normalized u16 weights per UID"
+    frequency: "After evaluation window completes"
+    commit_reveal: "Not required (direct set_weights)"
+
+# ===========================================================================
+# VALIDATOR ARCHITECTURE
+# ===========================================================================
+
+validator:
+  entrypoint: "af validate"
+  
+  services:
+    validator:
+      command: "af -vv validate"
+      role: "Orchestrates evaluation, computes scores"
+    runner:
+      command: "af -vv runner"
+      role: "Executes environment evaluations"
+    signer:
+      role: "Signs weight submissions"
+    prometheus:
+      role: "Metrics collection"
+  
+  deployment:
+    recommended: docker_compose
+    file: "docker-compose.yml"
+  
+  loop:
+    1_fetch_commitments: "Read miner model info from chain"
+    2_evaluate_models: "Query each model on each environment"
+    3_aggregate_results: "Compute per-environment success rates"
+    4_check_eligibility: "Filter by minimum samples/accuracy"
+    5_compute_pareto: "Find ε-dominant models per subset"
+    6_calculate_weights: "Winners-take-all scoring"
+    7_set_weights: "Submit to chain via signer"
+
+# ===========================================================================
+# KEY DESIGN DECISIONS
+# ===========================================================================
+
+design_decisions:
+  why_pareto:
+    problem: "Single-metric subnets allow gaming via overfit"
+    solution: "Multi-environment Pareto requires general capability"
+    tradeoff: "Harder for new miners to break into frontier"
+  
+  why_winners_take_all:
+    problem: "Proportional rewards dilute across similar models"
+    solution: "Only frontier wins, forcing differentiation"
+    tradeoff: "High variance for miners near frontier"
+  
+  why_chutes:
+    problem: "Validators shouldn't run expensive inference"
+    solution: "Models hosted on Chutes, validators query API"
+    tradeoff: "Dependency on Chutes availability"
+  
+  why_copy_and_improve:
+    mechanism: |
+      Current best model is public. Miners download it,
+      improve it, redeploy. Creates continuous improvement cycle.
+    benefit: "Open source improvement flywheel"
+    reference: subnet.invariants.yaml#open_source_preference
+
+# ===========================================================================
+# CONNECTIONS TO KNOWLEDGE BASE
+# ===========================================================================
+
+knowledge_connections:
+  subnet.invariants.yaml:
+    validator_only_development: "Miners only commit models, no code"
+    open_source_preference: "Best model is public, copied, improved"
+    compute_distribution: "Chutes hosts inference, validators query"
+  
+  container_execution.yaml:
+    pattern_match: "Miners compete on software (model) quality"
+    deviation: "Models hosted on Chutes, not validator-run containers"
+    reason: "LLM inference too expensive for validator sandboxing"
+  
+  capacity_market.yaml:
+    chutes_uses: "SN64 provides inference capacity market"
+    affine_uses: "Chutes as infrastructure dependency"
+  
+  incentive.primitives.yaml:
+    commodity_type: "software/predictions hybrid"
+    verification_method: "direct (immediate task evaluation)"
+    scoring_formula: "Pareto dominance + winners-take-all"
+    anti_gaming: "Natural sybil/copy/overfit resistance"
+
+# ===========================================================================
+# LESSONS LEARNED
+# ===========================================================================
+
+lessons:
+  multi_environment_scoring:
+    insight: |
+      Requiring performance across multiple environments naturally
+      prevents overfitting without needing hidden test sets.
+    applies_to: "Any subnet where quality is multi-dimensional"
+  
+  pareto_as_deduplication:
+    insight: |
+      Pareto dominance inherently handles sybil attacks.
+      Copies can only tie, never dominate. No multi-identity benefit.
+    applies_to: "Subnets where miners submit comparable artifacts"
+  
+  copy_improve_cycle:
+    insight: |
+      Making the best model public creates improvement pressure.
+      Network gets better over time as miners iterate on leader.
+    applies_to: "Open source model improvement subnets"
+  
+  delayed_ground_truth_not_needed:
+    insight: |
+      Unlike prediction markets, Affine evaluates immediately.
+      Programs are executed and checked in real-time.
+    contrasts_with: prediction_market.yaml
+
+# ===========================================================================
+# QUICK REFERENCE
+# ===========================================================================
+
+quick_reference:
+  measuring: "Reasoning model quality across DED/ABD/SAT environments"
+  pattern: "container_execution + Pareto scoring"
+  miner_provides: "Trained model on Hugging Face, deployed to Chutes"
+  validator_does: "Evaluates models, computes Pareto frontier, sets weights"
+  novel_mechanism: "ε-Pareto dominance with winners-take-all over subsets"
+  key_invariant: "Must dominate ALL environments to earn, prevents gaming"

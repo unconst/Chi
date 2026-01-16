@@ -1,0 +1,377 @@
+# Example: Zeus (SN18)
+# Decentralized weather forecasting using ERA5 climate data
+# Pattern: time_series_forecasting with objective ground truth
+
+metadata:
+  name: zeus
+  subnet: 18
+  repo: "https://github.com/Orpheus-AI/Zeus"
+  developer: "Orpheus AI"
+  category: weather_forecasting
+  patterns_used:
+    - time_series_forecasting
+  data_source: "ERA5 reanalysis (Copernicus Climate Data Store)"
+
+# ===========================================================================
+# WHAT IS BEING MEASURED
+# ===========================================================================
+
+measurement:
+  one_sentence: "Weather forecast accuracy against ERA5 ground truth"
+  commodity: predictions
+  
+  detail: |
+    Miners train ML models on historical ERA5 climate data.
+    Validators issue challenges: forecast variables at specific locations/times.
+    Predictions compared to held-out ERA5 data using RMSE.
+    Scoring: 80% accuracy (RMSE) + 20% response speed.
+
+  mission: "Deliver high-performance decentralized weather forecasting"
+
+# ===========================================================================
+# MECHANISM OVERVIEW
+# ===========================================================================
+
+mechanism:
+  summary: |
+    Validators generate forecast challenges (location, time, variable).
+    Miners respond with predictions from their trained models.
+    Predictions compared to ERA5 reanalysis (ground truth).
+    Score = RMSE accuracy + response speed.
+    Mixture of Experts selects best miners per context.
+
+  flow:
+    validator:
+      1_generate_challenge: "Create forecast task (location, time, horizon, variable)"
+      2_send_to_miners: "Dispatch challenge to registered miners"
+      3_collect_responses: "Receive predictions + measure latency"
+      4_fetch_ground_truth: "Get actual ERA5 data for comparison"
+      5_compute_rmse: "Calculate prediction error vs ground truth"
+      6_apply_difficulty: "Gamma scaling for temporal difficulty"
+      7_combine_scores: "80% RMSE + 20% speed"
+      8_set_weights: "Submit weights via Yuma Consensus"
+    
+    miner:
+      1_train_model: "Train forecasting model on ERA5 data"
+      2_receive_challenge: "Get forecast task from validator"
+      3_run_inference: "Generate prediction for requested location/time"
+      4_respond_quickly: "Speed matters for 20% of score"
+
+# ===========================================================================
+# DATA SOURCE: ERA5 REANALYSIS
+# ===========================================================================
+
+data_source:
+  name: "ERA5 Reanalysis"
+  provider: "Copernicus Climate Data Store (CDS)"
+  coverage:
+    temporal: "1940 to present"
+    resolution_time: "Hourly"
+    resolution_spatial: "~30 km globally"
+  
+  purpose:
+    training: "Miners train models on historical ERA5 data"
+    ground_truth: "Validators compare predictions to ERA5 values"
+    held_out: "Evaluation uses data miners haven't seen"
+
+# ===========================================================================
+# ENVIRONMENTAL VARIABLES
+# ===========================================================================
+
+variables:
+  surface:
+    temperature_2m:
+      code: "t2m"
+      description: "Temperature at 2 meters above ground"
+      units: "Kelvin"
+      primary: true
+    
+    dewpoint_2m:
+      code: "d2m"
+      description: "Dewpoint temperature at 2 meters"
+      units: "Kelvin"
+    
+    surface_pressure:
+      code: "sp"
+      description: "Surface pressure"
+      units: "Pa"
+      added_in: "v1.5.0"
+    
+    total_precipitation:
+      code: "tp"
+      description: "Total accumulated precipitation"
+      units: "m"
+  
+  wind:
+    wind_10m_u:
+      description: "Eastward wind component at 10 meters"
+    wind_10m_v:
+      description: "Northward wind component at 10 meters"
+    wind_100m:
+      description: "Wind at 100 meters (for energy applications)"
+    wind_gusts:
+      code: "fg10"
+      description: "Maximum 10-meter wind gusts"
+  
+  other:
+    sea_surface_temperature: "For ocean/coastal forecasts"
+    solar_radiation: "Surface solar radiation downwards"
+    snow_depth: "For winter weather applications"
+
+# ===========================================================================
+# SCORING MECHANISM
+# ===========================================================================
+
+scoring:
+  components:
+    accuracy:
+      metric: "RMSE (Root Mean Square Error)"
+      weight: 0.80  # 80% of total score
+      interpretation: "Lower RMSE = better accuracy = higher score"
+      comparison: "Against ERA5 ground truth"
+    
+    speed:
+      weight: 0.20  # 20% of total score
+      perfect_threshold: "≤ 0.2-0.4 seconds"
+      interpretation: "Fast responses score higher"
+      normalization: "Relative to median miner response"
+  
+  formula: |
+    score = gamma_difficulty * (0.80 * rmse_score + 0.20 * speed_score)
+  
+  version_history:
+    v1.4.0: "30% speed, 70% RMSE"
+    v1.4.3: "20% speed, 80% RMSE (current)"
+
+# ===========================================================================
+# DIFFICULTY SCALING
+# ===========================================================================
+
+difficulty_scaling:
+  gamma_difficulty:
+    purpose: "Adjust for forecast difficulty"
+    
+    temporal:
+      description: "Longer lead-time forecasts are harder"
+      effect: "Fairer scoring for far-future predictions"
+      added_in: "v1.5.1"
+    
+    geographic:
+      description: "Some locations are harder to predict"
+      examples:
+        hard: ["Mountains", "Tropics", "High variability regions"]
+        easy: ["Oceans", "Stable atmospheric regimes"]
+      effect: "Higher rewards for difficult predictions"
+  
+  rationale: |
+    Prevents miners from cherry-picking easy forecasts.
+    Encourages specialization in difficult regions/horizons.
+
+# ===========================================================================
+# MIXTURE OF EXPERTS (MoE)
+# ===========================================================================
+
+mixture_of_experts:
+  description: "Dynamic selection of best miners per context"
+  
+  selection_criteria:
+    - region: "Geographic location of forecast"
+    - variable: "Which variable being forecast"
+    - horizon: "How far into the future"
+  
+  best_recent_performer:
+    name: "BRP"
+    window: "Rolling 24 hours"
+    function: "Selects top miners for each horizon"
+    effect: "High-performing models used more often"
+  
+  benefit: |
+    Allows specialization - miners can focus on specific
+    regions, variables, or time horizons rather than
+    being generalists. Competition drives quality.
+
+# ===========================================================================
+# REPORTED PERFORMANCE
+# ===========================================================================
+
+performance:
+  vs_baseline:
+    temperature_2m:
+      average_improvement: "~39.8%"
+      short_horizon_0_2_days: "~42.8% improvement"
+      rmse: "~1.05 K vs baseline ~1.74 K"
+    
+    precipitation:
+      average_improvement: "~14.9%"
+      short_horizon_0_1_day: "~27.5% improvement"
+  
+  note: |
+    These metrics from internal reports; independent
+    peer review needed for full validation.
+
+# ===========================================================================
+# ANTI-GAMING PROPERTIES
+# ===========================================================================
+
+anti_gaming:
+  held_out_data:
+    mechanism: "Evaluation uses ERA5 data miners haven't seen"
+    benefit: "Cannot memorize training data"
+  
+  difficulty_scaling:
+    mechanism: "Gamma adjusts for temporal/geographic difficulty"
+    benefit: "No reward for cherry-picking easy forecasts"
+  
+  speed_weighting:
+    mechanism: "20% of score from response speed"
+    benefit: "Prevents slow, overly-complex models"
+  
+  dynamic_selection:
+    mechanism: "MoE selects best miners per context"
+    benefit: "Must perform well recently to be chosen"
+  
+  objective_ground_truth:
+    mechanism: "ERA5 reanalysis provides objective comparison"
+    benefit: "No subjective scoring, validators can verify"
+
+# ===========================================================================
+# VALIDATOR REQUIREMENTS
+# ===========================================================================
+
+validator:
+  responsibilities:
+    - generate_challenges: "Create forecast tasks"
+    - fetch_era5_data: "Access Copernicus CDS for ground truth"
+    - evaluate_responses: "Compare predictions to ERA5"
+    - compute_scores: "RMSE + speed + difficulty scaling"
+    - set_weights: "Submit via Yuma Consensus"
+  
+  infrastructure:
+    data_access: "Copernicus Climate Data Store API"
+    compute: "Minimal - just comparison, not model training"
+    networking: "ZeusDendrite for efficient challenge dispatch"
+  
+  releases:
+    v1.2.5: "New validator backbone (ZeusDendrite), 4-5x faster"
+    v1.5.2: "Handle OpenMeteo/ERA5 downtime gracefully"
+
+# ===========================================================================
+# MINER STRATEGIES
+# ===========================================================================
+
+miner_strategies:
+  specialization:
+    description: "Focus on specific regions, variables, or horizons"
+    benefit: "MoE routing rewards expertise"
+    examples:
+      - "Short-horizon temperature specialist"
+      - "Coastal precipitation expert"
+      - "Mountainous terrain forecaster"
+  
+  short_horizon_focus:
+    description: "0-2 day forecasts show highest improvement"
+    benefit: "Best accuracy gains, more BRP selection"
+  
+  infrastructure_optimization:
+    description: "Fast response times, efficient pipelines"
+    benefit: "20% of score + more challenge opportunities"
+  
+  continuous_retraining:
+    description: "Adapt to recent weather patterns"
+    benefit: "Stay competitive in BRP metrics"
+
+# ===========================================================================
+# COMPARISON TO OTHER SUBNETS
+# ===========================================================================
+
+pattern_comparison:
+  vs_numinous:
+    similarity: "Both do forecasting with delayed ground truth"
+    difference: "Zeus uses ERA5 (objective), Numinous uses event outcomes"
+    difference: "Zeus is weather, Numinous is general forecasting"
+  
+  vs_time_series_forecasting:
+    alignment: "Perfect match for pattern"
+    implementation: "ERA5 provides objective ground truth"
+  
+  vs_container_execution:
+    difference: "Zeus evaluates predictions, not running code"
+    similarity: "Miners compete on model quality"
+
+# ===========================================================================
+# CONNECTIONS TO KNOWLEDGE BASE
+# ===========================================================================
+
+knowledge_connections:
+  subnet.invariants.yaml:
+    validator_only_development: "Validators evaluate, miners train"
+    open_source_preference: "Any model framework acceptable"
+    compute_distribution: "Miners train, validators just compare"
+  
+  time_series_forecasting.yaml:
+    pattern_match: "Forecast future values, compare to ground truth"
+    implementation: "ERA5 provides objective reanalysis data"
+    delay: "ERA5 has some processing delay but is reliable"
+  
+  incentive.primitives.yaml:
+    commodity_type: "predictions"
+    verification_method: "direct (ERA5 comparison)"
+    scoring_formula: "80% RMSE + 20% speed + gamma difficulty"
+    anti_gaming: "Held-out data, difficulty scaling, dynamic selection"
+  
+  design_flow.yaml:
+    commodity: predictions
+    ground_truth: "ERA5 reanalysis"
+    pattern: time_series_forecasting
+
+# ===========================================================================
+# LESSONS LEARNED
+# ===========================================================================
+
+lessons:
+  objective_ground_truth:
+    insight: |
+      ERA5 reanalysis provides objective, reproducible ground truth.
+      Validators don't need to be weather experts - just compare
+      predictions to authoritative data source.
+    applies_to: "Any forecasting subnet with reliable data source"
+  
+  mixture_of_experts:
+    insight: |
+      Dynamic MoE selection encourages specialization.
+      Miners can focus on niches (regions, variables, horizons)
+      rather than building monolithic generalist models.
+    applies_to: "Multi-dimensional forecasting problems"
+  
+  difficulty_scaling:
+    insight: |
+      Gamma scaling prevents gaming by cherry-picking easy cases.
+      Harder predictions (far future, volatile regions) get
+      proportionally more credit.
+    applies_to: "Any subnet where task difficulty varies"
+  
+  speed_as_secondary_metric:
+    insight: |
+      20% weight for speed prevents over-optimization on accuracy
+      at expense of latency. Keeps system responsive.
+    applies_to: "Real-time prediction subnets"
+  
+  version_evolution:
+    insight: |
+      Zeus evolved scoring weights (30%→20% speed) based on
+      operational experience. Subnet parameters should be tunable.
+    applies_to: "All subnets - expect iteration"
+
+# ===========================================================================
+# QUICK REFERENCE
+# ===========================================================================
+
+quick_reference:
+  measuring: "Weather forecast accuracy against ERA5 reanalysis"
+  pattern: "time_series_forecasting with objective ground truth"
+  miner_provides: "Trained forecasting model predictions"
+  validator_does: "Generates challenges, compares to ERA5, scores RMSE+speed"
+  data_source: "ERA5 reanalysis (Copernicus)"
+  scoring: "80% RMSE accuracy + 20% response speed + gamma difficulty"
+  novel_mechanism: "Mixture of Experts for dynamic miner selection"
+  key_invariant: "ERA5 provides objective, authoritative ground truth"

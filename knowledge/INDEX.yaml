@@ -49,6 +49,19 @@ files_by_category:
     design_flow.yaml: "decision tree for mechanism selection"
     load_order.yaml: "context loading sequences by task"
 
+  example_subnets:
+    example.affine_sn120.yaml: "Affine - multi-env Pareto scoring for reasoning models"
+    example.numinous_sn6.yaml: "Numinous - forecasting agents with Brier scoring"
+    example.404gen_sn17.yaml: "404-GEN - 3D asset generation from text prompts"
+    example.zeus_sn18.yaml: "Zeus - weather forecasting with ERA5 ground truth"
+    example.kinitro_sn26.yaml: "Kinitro - robotic agent competitions on MetaWorld"
+    example.bitmind_sn34.yaml: "BitMind GAS - adversarial deepfake detection"
+    example.lium_sn51.yaml: "Lium - GPU rental marketplace with collateral"
+    example.gradients_sn56.yaml: "Gradients/G.O.D - model fine-tuning tournaments"
+    example.nova_sn68.yaml: "Nova - drug discovery with deterministic oracle"
+    example.hippius_sn75.yaml: "Hippius - decentralized storage and compute"
+    example.swarm_sn124.yaml: "Swarm - drone autopilot policy competition"
+
 task_routing:
   designing_new_subnet:
     load:
@@ -117,6 +130,24 @@ task_routing:
   token_trading:
     load:
       - sdk.quick_reference.yaml
+
+  studying_example_subnets:
+    load:
+      - subnet.invariants.yaml
+      - "{example_file}.yaml"
+    then: "load corresponding pattern files referenced in knowledge_connections"
+    available_examples:
+      - example.affine_sn120.yaml
+      - example.numinous_sn6.yaml
+      - example.404gen_sn17.yaml
+      - example.zeus_sn18.yaml
+      - example.kinitro_sn26.yaml
+      - example.bitmind_sn34.yaml
+      - example.lium_sn51.yaml
+      - example.gradients_sn56.yaml
+      - example.nova_sn68.yaml
+      - example.hippius_sn75.yaml
+      - example.swarm_sn124.yaml
 
 critical_doctrines:
   - "Validator-only development: ONLY write validator.py, NEVER miner code"

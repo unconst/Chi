@@ -1,0 +1,323 @@
+# Example: Gradients / G.O.D (SN56)
+# Decentralized model fine-tuning via tournaments
+# Pattern: container_execution with code submission
+
+metadata:
+  name: gradients
+  also_known_as: "G.O.D (Gradients on Demand)"
+  subnet: 56
+  repo: "https://github.com/gradients-ai/G.O.D"
+  developer: "Rayon Labs"
+  category: model_training
+  patterns_used:
+    - container_execution  # validators run miner code
+  emission_share: "2.66%"
+
+# ===========================================================================
+# WHAT IS BEING MEASURED
+# ===========================================================================
+
+measurement:
+  one_sentence: "Fine-tuning code quality on secret held-out test sets"
+  commodity: software  # → container_execution pattern
+  
+  detail: |
+    Miners submit fine-tuning CODE (not models).
+    Validators run code in secure isolated environments.
+    Evaluation on SECRET held-out test sets.
+    Tournament structure: weekly, knockout brackets.
+    Winning code is open-sourced for community.
+
+  mission: "Anyone can train on Bittensor - decentralized AutoML"
+
+# ===========================================================================
+# MECHANISM OVERVIEW
+# ===========================================================================
+
+mechanism:
+  summary: |
+    Weekly tournaments where miners compete to fine-tune models.
+    Miners submit training scripts, not final models.
+    Validators execute code securely, evaluate on hidden data.
+    Knockout bracket determines winner.
+    Top miners' code published as open-source.
+
+  flow:
+    miner:
+      1_develop_code: "Create fine-tuning script/strategy"
+      2_submit_link: "Provide link to code repository"
+      3_wait_evaluation: "Validator runs code on secure infra"
+      4_compete: "Advance through tournament rounds"
+      5_open_source: "If winner, code archived publicly"
+    
+    validator:
+      1_collect_submissions: "Gather miner code links"
+      2_setup_environment: "Prepare secure isolated compute"
+      3_run_training: "Execute miner code on dataset"
+      4_evaluate: "Test on SECRET held-out data"
+      5_score_miners: "Rank by performance metrics"
+      6_advance_tournament: "Progress winners through bracket"
+      7_set_weights: "Submit via Yuma Consensus"
+
+# ===========================================================================
+# TASK TYPES
+# ===========================================================================
+
+task_types:
+  instruct:
+    description: "Standard instruction-following fine-tuning"
+    method: "Supervised learning on instruction-response pairs"
+    legacy_task_share: "35%"
+    legacy_reward_weight: "35%"
+  
+  dpo:
+    name: "Direct Preference Optimization"
+    description: "Train model to prefer certain responses"
+    method: "Preference pairs (preferred vs rejected)"
+    legacy_task_share: "20%"
+    legacy_reward_weight: "10%"
+  
+  grpo:
+    name: "Group Relative Policy Optimization"
+    description: "RL-style training with group-normalized rewards"
+    method: "Sample multiple completions, normalize rewards within group"
+    legacy_task_share: "20%"
+    legacy_reward_weight: "35%"
+    benefit: "Handles complex reward functions"
+  
+  diffusion:
+    description: "Image generation model fine-tuning"
+    method: "Diffusion-based training for style/subject"
+    legacy_task_share: "25%"
+    legacy_reward_weight: "20%"
+
+# ===========================================================================
+# TOURNAMENT STRUCTURE (Gradients 5.0)
+# ===========================================================================
+
+tournament:
+  frequency: "Weekly (4-7 days per tournament)"
+  gap: "72 hours between tournaments"
+  
+  participation:
+    max_miners: 32
+    selection: "Based on ALPHA stake in subnet"
+    bonus: "Past performance increases stake"
+  
+  structure:
+    initial_rounds: "All miners compete on tasks"
+    advancement: "Top performers advance to knockout"
+    knockout: "Single elimination bracket"
+    boss_round: "Challenger vs defending champion"
+  
+  champion_system:
+    margin_to_win: "5-10% depending on defense count"
+    multiple_tasks: "Boss round uses multiple evaluation tasks"
+    accumulation: "Champions can defend multiple times"
+  
+  archival:
+    winners: "1st and 2nd place code archived"
+    destination: "Open-source repository"
+    benefit: "Community can build on winning strategies"
+
+# ===========================================================================
+# CODE SUBMISSION (KEY INNOVATION)
+# ===========================================================================
+
+code_submission:
+  what_miners_submit: "Link to fine-tuning code/script"
+  not_submitted: "Pre-trained models"
+  
+  rationale: |
+    Submitting code (not models) ensures:
+    - Reproducibility: validators can re-run
+    - Fairness: same compute for all
+    - Transparency: winning methods are visible
+    - Knowledge sharing: community learns from winners
+  
+  execution:
+    environment: "Secure isolated container"
+    compute: "Provided by validator infrastructure"
+    data: "Training data + SECRET test set"
+
+# ===========================================================================
+# SECRET TEST SET (ANTI-GAMING)
+# ===========================================================================
+
+secret_test_set:
+  description: "Held-out evaluation data never shown to miners"
+  
+  purpose:
+    prevent_overfitting: "Cannot tailor to known samples"
+    ensure_generalization: "Models must actually learn"
+    fair_comparison: "All miners evaluated identically"
+  
+  types:
+    text: "Held-out instruction/response pairs"
+    image: "Controlled noisy image tasks"
+
+# ===========================================================================
+# SCORING MECHANISM
+# ===========================================================================
+
+scoring:
+  legacy_system:
+    per_task:
+      top_performer: "+3 points"
+      bottom_25_percent: "-1 point"
+      middle_performers: "0 points"
+  
+  tournament_system:
+    advancement: "Points increase with each round"
+    consistency: "1-, 3-, 7-day performance windows"
+    exponential: "Later rounds worth more"
+  
+  emission_by_task:
+    text_tasks:
+      base: "15%"
+      performance_bonus: "Up to 60%"
+    image_tasks:
+      base: "10%"
+      performance_bonus: "Up to 40%"
+
+# ===========================================================================
+# ANTI-GAMING PROPERTIES
+# ===========================================================================
+
+anti_gaming:
+  code_not_models:
+    mechanism: "Submit training scripts, not final weights"
+    benefit: "Reproducible, auditable, transparent"
+  
+  secret_test_sets:
+    mechanism: "Evaluation data hidden from miners"
+    benefit: "Cannot overfit to evaluation samples"
+  
+  secure_execution:
+    mechanism: "Validators run code in isolated containers"
+    benefit: "Cannot cheat with external resources"
+  
+  tournament_structure:
+    mechanism: "Knockout elimination with multiple rounds"
+    benefit: "Must consistently perform, not just once"
+  
+  champion_margin:
+    mechanism: "Challenger must beat champion by 5-10%"
+    benefit: "Prevents lucky one-off wins"
+  
+  code_archival:
+    mechanism: "Winning code is open-sourced"
+    benefit: "Transparency, community verification"
+
+# ===========================================================================
+# COMPARISON TO OTHER SUBNETS
+# ===========================================================================
+
+pattern_comparison:
+  vs_affine:
+    similarity: "Both evaluate model/code quality"
+    difference: "Gradients focuses on training code; Affine on inference"
+    difference: "Gradients uses tournaments; Affine uses Pareto scoring"
+  
+  vs_kinitro:
+    similarity: "Both run miner code in controlled environments"
+    difference: "Gradients trains LLMs; Kinitro trains RL agents"
+  
+  vs_container_execution:
+    alignment: "Perfect match - validators run miner code"
+    implementation: "Secure container execution on validator infra"
+
+# ===========================================================================
+# CONNECTIONS TO KNOWLEDGE BASE
+# ===========================================================================
+
+knowledge_connections:
+  subnet.invariants.yaml:
+    validator_only_development: "Validators run training, miners submit code"
+    compute_distribution: "Heavy compute on validators (training)"
+    open_source_preference: "Winning code is open-sourced"
+  
+  container_execution.yaml:
+    pattern_match: "Miners compete on code quality"
+    implementation: "Secure isolated execution"
+    evaluation: "Performance on secret test sets"
+  
+  incentive.primitives.yaml:
+    commodity_type: "software (training code)"
+    verification_method: "direct (run code, measure metrics)"
+    scoring_formula: "Tournament advancement + task performance"
+    anti_gaming: "Secret tests, code submission, secure execution"
+  
+  design_flow.yaml:
+    commodity: software
+    ground_truth: "Secret held-out test sets"
+    pattern: container_execution
+
+# ===========================================================================
+# LESSONS LEARNED
+# ===========================================================================
+
+lessons:
+  code_not_models:
+    insight: |
+      Submitting training CODE instead of final models enables:
+      - Reproducibility (validators can verify)
+      - Transparency (community can learn)
+      - Fairness (same compute for all)
+      This is a paradigm shift from traditional model competitions.
+    applies_to: "Training-focused subnets"
+  
+  tournament_structure:
+    insight: |
+      Weekly tournaments with knockout brackets create:
+      - Clear milestones and deadlines
+      - Excitement and engagement
+      - Fair competition over time
+      The champion/challenger system adds stability.
+    applies_to: "Competitive subnets with long evaluation cycles"
+  
+  secret_test_sets:
+    insight: |
+      Hidden evaluation data is ESSENTIAL for training subnets.
+      Without it, miners would overfit to known benchmarks.
+      Must be carefully managed to prevent leakage.
+    applies_to: "Any ML training or evaluation subnet"
+  
+  open_sourcing_winners:
+    insight: |
+      Publishing winning code creates:
+      - Rising baseline for future competitions
+      - Community learning and improvement
+      - Transparency in what works
+      Trades individual advantage for ecosystem growth.
+    applies_to: "Innovation-focused subnets"
+  
+  task_type_diversity:
+    insight: |
+      Supporting multiple fine-tuning types (Instruct, DPO, GRPO, Diffusion)
+      allows miners to specialize and creates richer competition.
+      Reward weights can be tuned per task type.
+    applies_to: "Multi-task training subnets"
+  
+  compute_on_validators:
+    insight: |
+      Having validators run training (not miners) ensures:
+      - Equal compute access for all miners
+      - Consistent evaluation conditions
+      - No advantage from mining hardware
+      Tradeoff: validators need significant GPU resources.
+    applies_to: "Training subnets where fairness matters"
+
+# ===========================================================================
+# QUICK REFERENCE
+# ===========================================================================
+
+quick_reference:
+  measuring: "Fine-tuning code quality on secret held-out test sets"
+  pattern: "container_execution with code submission"
+  miner_provides: "Link to fine-tuning script/code"
+  validator_does: "Runs code securely, evaluates on secret data, manages tournament"
+  task_types: "Instruct, DPO, GRPO, Diffusion"
+  tournament: "Weekly, 32 miners, knockout bracket, champion/challenger"
+  novel_mechanism: "Code submission (not models) + open-source winners"
+  key_invariant: "Secret test sets prevent overfitting to benchmarks"

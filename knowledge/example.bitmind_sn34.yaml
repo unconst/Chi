@@ -1,0 +1,344 @@
+# Example: BitMind GAS (SN34)
+# Generative Adversarial Subnet for deepfake detection
+# Pattern: adversarial_red_blue (generators vs detectors)
+
+metadata:
+  name: bitmind_gas
+  subnet: 34
+  repo: "https://github.com/BitMind-AI/bitmind-subnet"
+  full_name: "Generative Adversarial Subnet (GAS)"
+  category: deepfake_detection
+  patterns_used:
+    - adversarial_red_blue  # generators vs discriminators
+  modalities: ["image", "video"]
+
+# ===========================================================================
+# WHAT IS BEING MEASURED
+# ===========================================================================
+
+measurement:
+  one_sentence: "Deepfake detection accuracy vs generation realism"
+  commodity: adversarial_competition
+  
+  detail: |
+    Two miner types compete: Generators create synthetic media to fool
+    detectors; Discriminators build models to distinguish real from fake.
+    Validators orchestrate the arms race, ensuring continuous improvement.
+
+  key_insight: |
+    Ground truth is EMERGENT from miner competition. Validators don't
+    control the "correct" answer - it emerges from the adversarial loop.
+
+# ===========================================================================
+# MECHANISM OVERVIEW
+# ===========================================================================
+
+mechanism:
+  summary: |
+    Generative miners produce synthetic media trying to fool detectors.
+    Discriminative miners submit detection models evaluated on mixed data.
+    Validators issue challenges, verify content, score both sides.
+    Arms race ensures detection keeps pace with generation advances.
+
+  adversarial_loop:
+    step_1: "Generators create synthetic media from prompts"
+    step_2: "Synthetic media added to benchmark dataset"
+    step_3: "Discriminators evaluated on real + synthetic mix"
+    step_4: "Generators rewarded when they fool discriminators"
+    step_5: "Discriminators rewarded for accurate detection"
+    step_6: "Both sides evolve, raising the bar continuously"
+
+  flow:
+    generative_miner:
+      1_receive_prompt: "Get challenge prompt from validator"
+      2_generate: "Create synthetic image/video"
+      3_submit: "Send media with C2PA credentials"
+      4_verification: "Validator checks quality, alignment, authenticity"
+      5_reward: "Earn based on fool rate + quality"
+    
+    discriminative_miner:
+      1_develop: "Build detection model (binary classifier)"
+      2_package: "Export as ONNX or compatible format"
+      3_submit: "Upload model for evaluation"
+      4_benchmark: "Evaluated on mixed real/synthetic dataset"
+      5_reward: "Earn based on MCC accuracy"
+    
+    validator:
+      1_issue_challenges: "Send prompts to generative miners"
+      2_verify_submissions: "Check C2PA, quality, alignment"
+      3_build_benchmark: "Mix real data + synthetic submissions"
+      4_evaluate_discriminators: "Run detection models on benchmark"
+      5_score: "Calculate MCC for discriminators, fool rate for generators"
+      6_set_weights: "EMA-smoothed weights via Yuma Consensus"
+
+# ===========================================================================
+# TWO MINER TYPES
+# ===========================================================================
+
+miner_types:
+  generative:
+    role: "Red team - create synthetic media"
+    goal: "Fool discriminators while passing quality checks"
+    output: "Synthetic images/videos with valid C2PA credentials"
+    
+    scoring:
+      base: "Valid submission that passes verification"
+      multiplier: "Fool rate - how often discriminators misclassify"
+    
+    verification_requirements:
+      c2pa_credentials: "Must have valid provenance from trusted AI generators"
+      quality_check: "Minimum visual quality threshold"
+      prompt_alignment: "Media must match the challenge prompt"
+      duplicate_detection: "pHash for images, frame hashing for videos"
+    
+    trusted_generators:
+      - OpenAI
+      - Microsoft
+      - Adobe
+      - Stability AI
+  
+  discriminative:
+    role: "Blue team - detect synthetic media"
+    goal: "Accurately classify real vs fake"
+    output: "Detection model (ONNX format)"
+    
+    scoring:
+      metric: "Matthews Correlation Coefficient (MCC)"
+      modality_weights:
+        image: 0.6
+        video: 0.4
+      formula: "score = image_weight * image_mcc + video_weight * video_mcc"
+    
+    model_requirements:
+      format: "ONNX or compatible"
+      no_endpoint_hosting: "Submit model, not API"
+      uniqueness: "Deduplication to prevent copied models"
+    
+    architectures_used:
+      - "CAMO (Content-Aware Model Orchestration)"
+      - "Mixture of experts (generalist + specialist detectors)"
+      - "Xception-based backbones"
+
+# ===========================================================================
+# SCORING MECHANISM
+# ===========================================================================
+
+scoring:
+  discriminative:
+    primary_metric: mcc
+    name: "Matthews Correlation Coefficient"
+    range: "[-1, 1], 0 = random, 1 = perfect"
+    why_mcc: "Better than accuracy for imbalanced binary classification"
+    
+    modality_weighting:
+      image: 0.6
+      video: 0.4
+    
+    classification_types:
+      binary: "real vs synthetic"
+      multiclass: "real vs semi-synthetic vs fully-synthetic"
+  
+  generative:
+    primary_metric: fool_rate
+    definition: "Fraction of discriminators that misclassify as real"
+    quality_gate: "Must pass verification to earn anything"
+  
+  weight_smoothing:
+    method: ema
+    alpha: 0.1
+    purpose: "Smooth performance over time, reduce noise"
+    formula: "score_t = α * instant + (1-α) * score_{t-1}"
+  
+  epoch:
+    length: "360 blocks (~72 minutes)"
+    weight_setting: "Validators set weights each epoch"
+
+# ===========================================================================
+# BENCHMARK DATASET
+# ===========================================================================
+
+benchmark:
+  composition:
+    real_world_data: "Authentic images/videos"
+    synthetic_from_generators: "Media submitted by generative miners"
+    local_adversarial: "Adversarial examples created by validators"
+  
+  evolution:
+    mechanism: |
+      Generator outputs become part of future benchmark.
+      Discriminators must adapt to novel generative advances.
+      Dataset continuously evolves with the arms race.
+  
+  modalities:
+    image: "Single frame analysis"
+    video: "Up to 144 frames, frame-by-frame analysis"
+
+# ===========================================================================
+# C2PA VERIFICATION
+# ===========================================================================
+
+c2pa:
+  name: "Coalition for Content Provenance and Authenticity"
+  purpose: "Verify media origin and editing history"
+  
+  mechanism:
+    manifest: "Cryptographic metadata embedded in media"
+    chain_of_custody: "Shows capture, editing, publishing history"
+    signature: "Verifiable by trusted generators"
+  
+  usage_in_bitmind:
+    generative_verification: "Synthetic media must have valid C2PA from trusted AI"
+    duplicate_prevention: "Combined with perceptual hashing"
+    trust_anchors: ["OpenAI", "Microsoft", "Adobe", "Stability AI"]
+
+# ===========================================================================
+# ANTI-GAMING PROPERTIES
+# ===========================================================================
+
+anti_gaming:
+  adversarial_emergence:
+    mechanism: "Ground truth emerges from competition, not validator control"
+    benefit: "Cannot game by predicting validator preferences"
+    reference: "adversarial_red_blue pattern"
+  
+  c2pa_verification:
+    mechanism: "Media must have valid provenance credentials"
+    benefit: "Prevents submission of random/stolen content"
+  
+  duplicate_detection:
+    mechanism: "pHash for images, frame hashing for videos"
+    benefit: "Prevents resubmission of existing media"
+  
+  model_deduplication:
+    mechanism: "Detect copied discriminator architectures"
+    benefit: "Rewards novel model development"
+  
+  ema_smoothing:
+    mechanism: "α = 0.1 smoothing on scores"
+    benefit: "Consistent performance matters over lucky rounds"
+  
+  quality_gates:
+    mechanism: "Minimum quality threshold for submissions"
+    benefit: "Prevents low-effort spam"
+
+# ===========================================================================
+# ADVERSARIAL ARMS RACE DYNAMICS
+# ===========================================================================
+
+arms_race:
+  principle: |
+    As generators improve, discriminators must evolve.
+    As discriminators improve, generators must innovate.
+    Continuous co-evolution ensures detection stays current.
+
+  dynamics:
+    generator_pressure: "Create fakes that evade current detection"
+    discriminator_pressure: "Build models robust to latest fakes"
+    dataset_evolution: "New fakes become tomorrow's training data"
+  
+  benefits:
+    - "Detection models stay current with generative advances"
+    - "No static dataset that can be memorized"
+    - "Incentivizes novel research on both sides"
+    - "Decentralized, transparent, open-weight models"
+  
+  risks_mitigated:
+    overfitting: "Benchmark continuously evolves"
+    gaming: "C2PA + quality checks prevent fake submissions"
+    centralization: "Open marketplace, anyone can participate"
+
+# ===========================================================================
+# COMPARISON TO OTHER PATTERNS
+# ===========================================================================
+
+pattern_comparison:
+  vs_container_execution:
+    difference: "No validator-run containers; models submitted for evaluation"
+    similarity: "Miners compete on software (model) quality"
+  
+  vs_prediction_market:
+    difference: "No delayed ground truth; immediate adversarial evaluation"
+  
+  vs_adversarial_red_blue:
+    perfect_match: "Classic red team (generators) vs blue team (discriminators)"
+    benefit: "Validators don't control ground truth"
+    reference: "adversarial_red_blue.yaml pattern"
+
+# ===========================================================================
+# CONNECTIONS TO KNOWLEDGE BASE
+# ===========================================================================
+
+knowledge_connections:
+  subnet.invariants.yaml:
+    validator_not_controlling_truth: "Ground truth emerges from miner competition"
+    open_source_preference: "Models evaluated openly, architectures shared"
+  
+  adversarial_red_blue.yaml:
+    pattern_match: "Perfect alignment with red/blue adversarial pattern"
+    red_team: "Generative miners create fakes"
+    blue_team: "Discriminative miners detect fakes"
+    validator_role: "Orchestrate, don't control answers"
+  
+  incentive.primitives.yaml:
+    commodity_type: "adversarial competition"
+    verification_method: "adversarial (miners verify each other)"
+    scoring_formula: "MCC for discriminators, fool rate for generators"
+    anti_gaming: "C2PA, deduplication, quality gates, EMA"
+  
+  design_flow.yaml:
+    commodity: detection_generation
+    ground_truth: emergent
+    pattern: adversarial_red_blue
+
+# ===========================================================================
+# LESSONS LEARNED
+# ===========================================================================
+
+lessons:
+  adversarial_ground_truth:
+    insight: |
+      When ground truth is expensive or subjective (is this fake?),
+      use adversarial competition. Answer emerges from miner competition.
+      Validators orchestrate but don't control the "correct" answer.
+    applies_to: "Detection/generation tasks where truth is complex"
+  
+  two_miner_types:
+    insight: |
+      Having two competing miner types (red vs blue) creates natural
+      co-evolution. Each side pushes the other to improve.
+    applies_to: "Any adversarial or security-focused subnet"
+  
+  c2pa_for_provenance:
+    insight: |
+      Using industry standards (C2PA) for content provenance provides
+      trustworthy verification without custom solutions.
+    applies_to: "Media-focused subnets needing authenticity checks"
+  
+  model_submission_not_hosting:
+    insight: |
+      Having miners submit models (ONNX) rather than host endpoints
+      levels the playing field - rewards model quality, not infrastructure.
+    applies_to: "Subnets where model quality matters more than uptime"
+  
+  evolving_benchmark:
+    insight: |
+      Using generator outputs as future benchmark data ensures
+      discriminators can't overfit to a static test set.
+    applies_to: "Any detection or classification subnet"
+
+# ===========================================================================
+# QUICK REFERENCE
+# ===========================================================================
+
+quick_reference:
+  measuring: "Deepfake detection accuracy vs generation realism"
+  pattern: "adversarial_red_blue (perfect match)"
+  miner_types:
+    generative: "Create synthetic media to fool detectors"
+    discriminative: "Build models to detect fakes"
+  validator_does: "Issues challenges, verifies content, benchmarks models"
+  scoring:
+    discriminators: "MCC on image (60%) + video (40%)"
+    generators: "Fool rate + quality verification"
+  novel_mechanism: "C2PA credential verification + evolving benchmark"
+  key_invariant: "Ground truth emerges from adversarial competition"

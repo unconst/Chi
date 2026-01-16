@@ -1,0 +1,389 @@
+# Example: 404-GEN (SN17)
+# Decentralized 3D asset generation from text prompts
+# Pattern: compute_auction + quality scoring on creative output
+
+metadata:
+  name: 404-gen
+  subnet: 17
+  repo: "https://github.com/404-Repo/three-gen-subnet"
+  category: 3d_generation
+  patterns_used:
+    - compute_auction   # miners provide GPU compute for generation
+  output_format: "Gaussian splats (PLY), meshes"
+
+# ===========================================================================
+# WHAT IS BEING MEASURED
+# ===========================================================================
+
+measurement:
+  one_sentence: "3D asset generation quality from text prompts"
+  commodity: compute  # GPU compute for 3D generation
+  
+  detail: |
+    Miners generate 3D assets (Gaussian splats, meshes) from text prompts.
+    Validators score based on visual fidelity, prompt alignment, geometry
+    quality, and generation speed. Best generators earn emissions.
+
+  mission: "Democratize 3D content creation for games, AR/VR/XR"
+
+# ===========================================================================
+# MECHANISM OVERVIEW
+# ===========================================================================
+
+mechanism:
+  summary: |
+    Validators fetch prompts (synthetic + organic traffic).
+    Miners generate 3D assets using GPU-intensive models.
+    Validators score outputs on multiple quality dimensions.
+    EMA-smoothed weights determine miner emissions.
+
+  flow:
+    prompt_generation:
+      source_1: "LLM-generated from 30 predefined object categories"
+      source_2: "Human-style organic prompts via public API"
+      collection: "Prompt collector aggregates batches hourly"
+    
+    miner:
+      1_receive: "Get text prompt from validator"
+      2_generate: "Run 3D generation model (Gaussian splatting, diffusion, etc.)"
+      3_respond: "Return PLY file (Gaussian splats) or mesh"
+      time: "~1-2 minutes per generation"
+    
+    validator:
+      1_fetch_prompts: "Get prompt batch from collector (hourly)"
+      2_distribute: "Send prompts to miners"
+      3_collect: "Receive 3D outputs (PLY files)"
+      4_render: "Render multi-view images from 3D"
+      5_score: "Evaluate visual fidelity, prompt alignment, geometry"
+      6_aggregate: "EMA-smooth scores over time"
+      7_set_weights: "Submit weights via Yuma Consensus"
+
+# ===========================================================================
+# 3D OUTPUT FORMATS
+# ===========================================================================
+
+output_formats:
+  gaussian_splats:
+    format: ".ply or .ply.spz (compressed)"
+    description: |
+      Collection of translucent ellipsoids with position, scale,
+      color, opacity. Efficient for real-time rendering.
+    use_cases:
+      - real_time_rendering
+      - VR_AR_experiences
+      - game_assets
+  
+  meshes:
+    format: ".fbx, .obj"
+    conversion: "Gaussian splats → mesh via client tools"
+    use_cases:
+      - traditional_game_engines
+      - 3D_printing
+      - CAD_workflows
+
+  generation_methods:
+    - gaussian_splatting
+    - neural_radiance_fields
+    - 3D_diffusion
+    - point_clouds
+
+# ===========================================================================
+# PROMPT GENERATION SYSTEM
+# ===========================================================================
+
+prompt_generation:
+  generator_1:
+    method: "LLM with category constraints"
+    models:
+      - "Qwen/Qwen2.5-7B-Instruct-1M"
+      - "microsoft/phi-4"
+      - "zai-org/glm-4-9b-chat-1m"
+    categories: 30  # predefined object types from market research
+    purpose: "Standardized prompts aligned with game asset trends"
+    rotation: "Models swapped periodically"
+  
+  generator_2:
+    method: "Letter-sampling for diversity"
+    process: |
+      1. Random sample initial letters for category + object
+      2. LLM selects category/object starting with those letters
+      3. LLM writes one-sentence description
+    purpose: "Human-like, diverse, natural-sounding prompts"
+    tradeoff: "Slower but more creative"
+  
+  organic_traffic:
+    source: "Public API from real users"
+    benefit: "Real-world prompt diversity"
+    usage: "Supplements synthetic prompts"
+
+  prompt_collector:
+    role: "Aggregates prompts from all sources"
+    delivery: "Fresh batches served to validators hourly"
+    configurable: "Fetch interval can be customized"
+
+# ===========================================================================
+# SCORING CRITERIA
+# ===========================================================================
+
+scoring:
+  dimensions:
+    visual_fidelity:
+      description: "How realistic/aesthetic does the output look?"
+      importance: high
+      includes:
+        - texture_quality
+        - color_accuracy
+        - material_realism
+    
+    prompt_alignment:
+      description: "Does the output match what was requested?"
+      importance: high
+      includes:
+        - object_identity
+        - attribute_accuracy
+        - style_compliance
+    
+    geometry_quality:
+      description: "Is the 3D structure correct and detailed?"
+      importance: high
+      includes:
+        - shape_accuracy
+        - proportions
+        - surface_detail
+        - no_artifacts
+    
+    generation_speed:
+      description: "How fast was the asset generated?"
+      importance: medium
+      target: "~1-2 minutes acceptable"
+    
+    usability:
+      description: "Is it production-ready for games/VR?"
+      importance: medium
+      includes:
+        - low_poly_optimization
+        - clean_topology
+        - game_engine_compatibility
+
+  evaluation_approach:
+    image_references: |
+      Use reference images (provided or synthesized) as anchors
+      to reduce subjectivity in scoring.
+    multi_view: |
+      Render 3D from multiple angles to verify consistency
+      and catch view-dependent artifacts.
+    
+  aggregation:
+    method: ema
+    purpose: "Smooth noise, reward consistent performance"
+    effect: "Recent performance matters more but history influences"
+
+# ===========================================================================
+# MINER REQUIREMENTS
+# ===========================================================================
+
+miner:
+  hardware:
+    optimal:
+      gpu: "NVIDIA A100 40GB"
+      cpu: "High-core count"
+      ram: "64+ GB"
+      storage: "Large NVMe SSD"
+    
+    minimum:
+      gpu: "NVIDIA RTX 4090"
+      note: "Lower tier = slower generation = lower scores"
+  
+  software:
+    models: "Open source 3D generation models"
+    techniques:
+      - gaussian_splatting
+      - diffusion_based_3D
+      - nerf_variants
+  
+  output_requirements:
+    format: "PLY (Gaussian splats) or mesh"
+    quality: "Must pass minimum quality threshold"
+    timeout: "Generation must complete in reasonable time"
+
+# ===========================================================================
+# ANTI-GAMING PROPERTIES
+# ===========================================================================
+
+anti_gaming:
+  non_deterministic_outputs:
+    challenge: "3D generation is stochastic - no single 'correct' answer"
+    solution: |
+      Focus on quality dimensions that matter to creators:
+      visual fidelity, usability, editability.
+      Not matching a fixed ground truth.
+  
+  prompt_diversity:
+    mechanism: "Multiple prompt generators + organic traffic"
+    benefit: "Can't overfit to narrow prompt set"
+  
+  image_reference_anchoring:
+    mechanism: "Use reference images to reduce subjectivity"
+    benefit: "More consistent scoring across validators"
+  
+  ema_smoothing:
+    mechanism: "Weights smoothed over time"
+    benefit: "Prevents gaming via occasional high-quality outputs"
+  
+  category_coverage:
+    mechanism: "30+ object categories from market research"
+    benefit: "Tests breadth of generation capability"
+
+# ===========================================================================
+# ECOSYSTEM INTEGRATIONS
+# ===========================================================================
+
+integrations:
+  blender_plugin:
+    features:
+      - text_prompt_input
+      - image_prompt_input
+      - gaussian_splat_import
+      - splat_to_mesh_conversion
+    settings: "Opacity thresholds, detail size, display percentage"
+  
+  unity_plugin:
+    features:
+      - prompt_based_generation
+      - PLY_import
+      - mesh_conversion_to_FBX
+    generation_time: "1-2 minutes per asset"
+  
+  discord_bot:
+    purpose: "Quick generation from chat interface"
+  
+  public_api:
+    purpose: "Organic traffic integration"
+    feeds_into: "Prompt collector for diversity"
+
+# ===========================================================================
+# DATASET CONTRIBUTION
+# ===========================================================================
+
+dataset:
+  name: "404-GEN 3D Model Dataset"
+  size: "21.5+ million AI-generated 3D models"
+  includes:
+    - gaussian_splats
+    - prompts
+    - metadata
+    - contributor_ids
+  format: ".ply.spz (compressed PLY) + PNG renders"
+  purpose: "Training/evaluating 3D generative models"
+  availability: open_source
+
+# ===========================================================================
+# VALIDATOR CONSENSUS
+# ===========================================================================
+
+consensus:
+  mechanism: yuma_consensus
+  
+  weight_setting:
+    1: "Validator scores each miner on quality dimensions"
+    2: "Scores EMA-smoothed over time"
+    3: "Weights submitted via set_weights"
+    4: "Yuma Consensus aggregates across validators"
+    5: "Stake-weighted median determines final weights"
+  
+  validator_requirements:
+    stake: "Minimum stake threshold"
+    permit: "Must hold validator permit"
+    hardware: "Capable of rendering and scoring 3D outputs"
+
+# ===========================================================================
+# COMPARISON TO OTHER PATTERNS
+# ===========================================================================
+
+pattern_comparison:
+  vs_compute_auction:
+    similarity: "Miners provide GPU compute for generation"
+    difference: "Output quality matters, not just price/speed"
+  
+  vs_container_execution:
+    difference: "Miners run their own models, not validator-executed code"
+    similarity: "Competition on software/model quality"
+  
+  unique_challenges:
+    non_determinism: "No single correct answer for creative generation"
+    subjectivity: "Visual quality is inherently subjective"
+    solution: "Reference images + multi-dimensional scoring"
+
+# ===========================================================================
+# CONNECTIONS TO KNOWLEDGE BASE
+# ===========================================================================
+
+knowledge_connections:
+  subnet.invariants.yaml:
+    compute_distribution: "Miners run GPU workloads, validators score"
+    open_source_preference: "Generation models are open source"
+  
+  compute_auction.yaml:
+    pattern_similarity: "GPU compute as commodity"
+    deviation: "Quality scoring, not just price competition"
+  
+  incentive.primitives.yaml:
+    commodity_type: "compute (GPU for 3D generation)"
+    verification_method: "direct (visual/geometric scoring)"
+    scoring_formula: "Multi-dimensional quality + EMA"
+    anti_gaming: "Prompt diversity, reference anchoring, EMA"
+  
+  design_flow.yaml:
+    commodity: compute
+    ground_truth: "Validator-assessed quality (with reference anchoring)"
+    challenge: "Non-deterministic creative outputs"
+
+# ===========================================================================
+# LESSONS LEARNED
+# ===========================================================================
+
+lessons:
+  scoring_creative_outputs:
+    insight: |
+      When outputs are non-deterministic (creative generation),
+      focus on quality dimensions that matter to end users:
+      visual fidelity, usability, editability.
+      Don't try to match a fixed ground truth.
+    applies_to: "Any generative AI subnet (images, audio, 3D, etc.)"
+  
+  reference_anchoring:
+    insight: |
+      Using image references reduces subjectivity in scoring.
+      Provides concrete anchor for prompt alignment evaluation.
+    applies_to: "Subnets with subjective quality assessment"
+  
+  prompt_diversity_sources:
+    insight: |
+      Combining synthetic (LLM-generated) + organic (user) prompts
+      ensures breadth of testing and real-world relevance.
+    applies_to: "Any prompt-based generation subnet"
+  
+  multi_view_evaluation:
+    insight: |
+      For 3D assets, render from multiple angles to catch
+      view-dependent artifacts and verify consistency.
+    applies_to: "3D generation, video generation subnets"
+  
+  hardware_as_barrier:
+    insight: |
+      High hardware requirements (A100/4090) create natural
+      barrier to entry, but also concentrate mining power.
+    tradeoff: "Quality vs. decentralization"
+
+# ===========================================================================
+# QUICK REFERENCE
+# ===========================================================================
+
+quick_reference:
+  measuring: "3D asset generation quality from text prompts"
+  pattern: "compute_auction with quality scoring"
+  miner_provides: "GPU compute + 3D generation model, outputs PLY/mesh"
+  validator_does: "Distributes prompts, scores outputs on quality dimensions"
+  output_format: "Gaussian splats (PLY), meshes"
+  novel_mechanism: "Reference-anchored scoring for non-deterministic creative outputs"
+  key_invariant: "Multi-dimensional quality scoring replaces fixed ground truth"

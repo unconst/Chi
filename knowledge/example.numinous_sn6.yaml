@@ -1,0 +1,374 @@
+# Example: Numinous (SN6)
+# Open source forecasting agent competition
+# Pattern: container_execution + prediction_market hybrid
+
+metadata:
+  name: numinous
+  subnet: 6
+  repo: "https://github.com/numinouslabs/numinous"
+  formerly: "Infinite Games"
+  category: forecasting
+  patterns_used:
+    - container_execution  # validators run agent code in sandboxes
+    - prediction_market    # delayed ground truth from event resolution
+  integrations:
+    - chutes              # SN64 for LLM inference inside sandboxes
+    - desearch            # SN22 for live data (news, social, web)
+
+# ===========================================================================
+# WHAT IS BEING MEASURED
+# ===========================================================================
+
+measurement:
+  one_sentence: "Forecasting agent quality across binary prediction events"
+  commodity: software  # → container_execution pattern
+  
+  detail: |
+    Numinous measures the forecasting ability of AGENTS (code), not just 
+    individual predictions. Agents are evaluated on Brier Score over a 
+    rolling window of 100 real-world binary events.
+
+  key_insight: |
+    Instead of scoring predictions f(X), score the underlying model X.
+    This prevents one-off lucky guesses and rewards consistent calibration.
+
+# ===========================================================================
+# MECHANISM OVERVIEW
+# ===========================================================================
+
+mechanism:
+  summary: |
+    Miners submit forecasting agent code (Python functions).
+    Validators execute agents in Docker sandboxes with controlled tool access.
+    Agents predict probabilities for real-world binary events.
+    After event resolution, Brier Score determines agent quality.
+    Winner-takes-all weighting based on rolling window performance.
+
+  lifecycle:
+    1_code_submission: "Miner submits agent code"
+    2_sandbox_execution: "Validators run agent on each event"
+    3_resolution: "Event outcome becomes known (from Polymarket/Azuro)"
+    4_weight_setting: "Brier scores aggregated, weights set on-chain"
+
+  flow:
+    miner:
+      1_develop: "Write agent implementing agent_main(event_data) -> prediction"
+      2_submit: "Submit code to subnet (activates next day at 00:00 UTC)"
+      3_wait: "Agent executes automatically on incoming events"
+      4_iterate: "Update code at most once every 3 days"
+    
+    validator:
+      1_receive_event: "Get event from prediction market feed"
+      2_execute_agents: "Run all registered agents in sandboxes"
+      3_collect_predictions: "Store probability forecasts"
+      4_await_resolution: "Wait for event outcome"
+      5_score: "Calculate Brier Score for each agent"
+      6_aggregate: "Average over rolling 100-event window"
+      7_set_weights: "Submit weights via Yuma Consensus"
+
+# ===========================================================================
+# AGENT INTERFACE
+# ===========================================================================
+
+agent_interface:
+  function_signature: |
+    def agent_main(event_data: dict) -> dict:
+        """
+        Args:
+            event_data: {
+                "event_id": str,
+                "title": str,
+                "description": str,
+                "cutoff": str,  # ISO 8601 timestamp
+                "metadata": dict
+            }
+
+        Returns:
+            {
+                "event_id": str,
+                "prediction": float  # 0.0 to 1.0 probability
+            }
+        """
+        # Agent logic here
+        return {"event_id": event_data["event_id"], "prediction": 0.75}
+
+  code_constraints:
+    max_size: "2 MB"
+    execution_timeout: "150 seconds"
+    api_cost_cap: "$0.02 per run"
+    
+  determinism_requirements:
+    - "No dynamic timestamps in prompts"
+    - "No random seeds (unless fixed)"
+    - "Same input must produce same output across validators"
+    reason: "Ensures validators reach consensus on agent results"
+
+# ===========================================================================
+# SANDBOX EXECUTION
+# ===========================================================================
+
+sandbox:
+  technology: docker_containers
+  isolation: full
+  
+  available_resources:
+    inference:
+      provider: "Chutes (SN64)"
+      access: "Via gateway proxy"
+      models: "Reasoning models, LLMs"
+    
+    live_data:
+      provider: "Desearch (SN22)"
+      access: "Via gateway proxy"
+      data: "News, Twitter, Reddit, web search"
+    
+    context:
+      - historical_data
+      - baseline_reasoning
+      - event_metadata
+
+  gateway:
+    purpose: "Secure proxy for external tool access"
+    protects: "Validator API keys not exposed to agent code"
+    mediates: "All external requests go through gateway"
+    benefit: "Consistent data across validators for determinism"
+
+# ===========================================================================
+# SCORING: BRIER SCORE
+# ===========================================================================
+
+scoring:
+  metric: brier_score
+  
+  formula:
+    description: "Proper scoring rule for probabilistic predictions"
+    if_event_occurs: "(1 - p)^2"
+    if_event_not_occurs: "p^2"
+    interpretation: "Lower score = better calibration"
+  
+  aggregation:
+    window: "Rolling 100 events"
+    method: "Average Brier Score over window"
+    purpose: "Smooth noise, reward consistent performance"
+  
+  weight_conversion:
+    mechanism: winner_takes_all
+    description: |
+      Agents ranked by average Brier Score.
+      Top performers receive disproportionate weight.
+      Creates strong incentive to be best, not just good.
+
+# ===========================================================================
+# GROUND TRUTH SOURCE
+# ===========================================================================
+
+ground_truth:
+  source: prediction_markets
+  providers:
+    - polymarket
+    - azuro
+  
+  resolution:
+    method: "Optimistic oracle from prediction market"
+    timing: "After event cutoff time"
+    binary: "YES (1.0) or NO (0.0)"
+  
+  cutoff_enforcement:
+    rule: "Only agents registered BEFORE event broadcast execute"
+    purpose: "Prevents late information leakage"
+
+# ===========================================================================
+# ANTI-GAMING PROPERTIES
+# ===========================================================================
+
+anti_gaming:
+  code_visibility:
+    mechanism: "All agent code is MIT licensed and public"
+    benefit: "Forecasts traceable to source logic"
+    enables: "Community auditing of prediction methods"
+  
+  determinism_enforcement:
+    mechanism: "No randomness, no timestamps in prompts"
+    benefit: "Validators reach consensus on same execution"
+    violation: "Execution failure or validator disagreement"
+  
+  update_rate_limiting:
+    mechanism: "Code updates limited to once per 3 days"
+    benefit: "Prevents rapid adaptation to leaked info"
+    activation: "Changes take effect at 00:00 UTC next day"
+  
+  rolling_window_scoring:
+    mechanism: "100-event rolling average"
+    benefit: "Lucky guesses don't dominate"
+    requirement: "Consistent calibration over time"
+  
+  resource_constraints:
+    timeout: "150 seconds prevents compute gaming"
+    cost_cap: "$0.02 prevents API abuse"
+    code_size: "2 MB prevents bloat"
+  
+  registration_timing:
+    mechanism: "Only pre-registered agents execute"
+    benefit: "Cannot submit after seeing event details"
+
+# ===========================================================================
+# KEY DESIGN PRINCIPLES
+# ===========================================================================
+
+principles:
+  discoverability:
+    description: "Agents improve by learning from each other's code"
+    implementation: "All code public, every forecast traceable"
+    benefit: "Network intelligence improves over time"
+  
+  composability:
+    description: "Best agents become building blocks"
+    use_cases:
+      - meta_models
+      - prediction_market_resolution
+      - high_frequency_trading_signals
+    benefit: "Reusable forecasting primitives"
+
+# ===========================================================================
+# INTEGRATIONS
+# ===========================================================================
+
+integrations:
+  chutes_sn64:
+    purpose: "LLM inference for agent reasoning"
+    access: "Gateway-mediated, cost-capped"
+    models: "Reasoning models (Qwen, Claude, etc.)"
+  
+  desearch_sn22:
+    purpose: "Live data for informed predictions"
+    access: "Gateway-mediated"
+    data_types:
+      - real_time_news
+      - twitter_sentiment
+      - reddit_discussions
+      - web_search_results
+
+# ===========================================================================
+# VALIDATOR CONSENSUS
+# ===========================================================================
+
+consensus:
+  mechanism: yuma_consensus
+  
+  process:
+    1: "Each validator executes all agents independently"
+    2: "Validators compute Brier scores after resolution"
+    3: "Validators submit weight assignments on-chain"
+    4: "Yuma Consensus takes stake-weighted median"
+    5: "Outlier weights clipped"
+    6: "Final consensus weights determine emissions"
+  
+  validator_trust:
+    metric: "Alignment with consensus after clipping"
+    effect: "Higher trust = more influence on final weights"
+
+# ===========================================================================
+# COMPARISON TO OTHER PATTERNS
+# ===========================================================================
+
+pattern_comparison:
+  vs_pure_prediction_market:
+    difference: "Scores agents (X), not predictions (f(X))"
+    benefit: "Rewards consistent calibration, not lucky guesses"
+  
+  vs_pure_container_execution:
+    difference: "Ground truth is delayed (event resolution)"
+    similarity: "Validators run miner code in sandboxes"
+  
+  vs_affine:
+    similarity: "Both run agent code, both use Chutes"
+    difference: "Affine uses Pareto over environments; Numinous uses Brier over events"
+    difference: "Affine is multi-task; Numinous is single-domain (forecasting)"
+
+# ===========================================================================
+# CONNECTIONS TO KNOWLEDGE BASE
+# ===========================================================================
+
+knowledge_connections:
+  subnet.invariants.yaml:
+    validator_only_development: "Miners submit code, validators execute"
+    open_source_preference: "All code MIT licensed, fully visible"
+    compute_distribution: "Chutes provides inference, validators orchestrate"
+  
+  container_execution.yaml:
+    pattern_match: "Miners compete on code quality"
+    implementation: "Docker sandboxes with gateway proxy"
+    deviation: "Delayed scoring (vs immediate in Basilica)"
+  
+  prediction_market.yaml:
+    pattern_match: "Delayed ground truth from event resolution"
+    scoring: "Brier Score (proper scoring rule)"
+    window: "Rolling 100 events for smoothing"
+  
+  chutes.integration.yaml:
+    usage: "LLM inference inside agent sandboxes"
+    access: "Via gateway proxy with cost caps"
+  
+  desearch.integration.yaml:
+    usage: "Live data for agent reasoning"
+    access: "Via gateway proxy"
+    data: "News, social media, web search"
+  
+  incentive.primitives.yaml:
+    commodity_type: "software (forecasting agents)"
+    verification_method: "delayed (event resolution)"
+    scoring_formula: "Brier Score over rolling window"
+    anti_gaming: "Determinism, rate limiting, code visibility"
+
+# ===========================================================================
+# LESSONS LEARNED
+# ===========================================================================
+
+lessons:
+  score_models_not_predictions:
+    insight: |
+      Evaluating the underlying model (agent) over many events
+      is more robust than scoring individual predictions.
+      Prevents gaming via lucky one-off guesses.
+    applies_to: "Any prediction/forecasting subnet"
+  
+  determinism_enables_consensus:
+    insight: |
+      Requiring deterministic agent execution allows validators
+      to independently run the same code and agree on results.
+      This is essential for decentralized validation.
+    applies_to: "Any container execution subnet"
+  
+  gateway_pattern_for_external_access:
+    insight: |
+      Using a signing proxy gateway allows sandboxed code
+      to access external services without exposing validator secrets.
+      Also ensures consistent data across validators.
+    applies_to: "Container subnets needing external API access"
+  
+  code_visibility_as_anti_gaming:
+    insight: |
+      Making all agent code public creates accountability.
+      Forecasts are auditable, methods can be scrutinized.
+      Enables learning and improvement across the network.
+    applies_to: "Any subnet valuing transparency over secrecy"
+  
+  update_rate_limiting:
+    insight: |
+      Limiting how often miners can update code prevents
+      rapid adaptation to leaked information or last-minute
+      adjustments based on event details.
+    applies_to: "Subnets with delayed ground truth"
+
+# ===========================================================================
+# QUICK REFERENCE
+# ===========================================================================
+
+quick_reference:
+  measuring: "Forecasting agent quality via Brier Score over 100 events"
+  pattern: "container_execution + prediction_market hybrid"
+  miner_provides: "Python agent code (agent_main function)"
+  validator_does: "Executes agents in sandboxes, scores after resolution"
+  ground_truth: "Binary event outcomes from Polymarket/Azuro"
+  novel_mechanism: "Gateway proxy for deterministic external access"
+  key_invariant: "Deterministic execution enables validator consensus"

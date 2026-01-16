@@ -1,0 +1,359 @@
+# Example: Nova (SN68)
+# Decentralized drug discovery via virtual screening
+# Pattern: deterministic oracle scoring with scientific rigor
+
+metadata:
+  name: nova
+  subnet: 68
+  repo: "https://github.com/metanova-labs/nova"
+  category: drug_discovery
+  patterns_used:
+    - compute_auction   # miners compete on molecule quality
+  oracle: "PSICHIC (Physicochemical Graph Neural Network)"
+  molecule_source: "SAVI (Synthetically Accessible Virtual Inventory)"
+
+# ===========================================================================
+# WHAT IS BEING MEASURED
+# ===========================================================================
+
+measurement:
+  one_sentence: "Molecule binding affinity to target proteins"
+  commodity: predictions  # molecular candidates with predicted binding
+  
+  detail: |
+    Miners submit molecules (SMILES format) targeting specific proteins.
+    Validators use deterministic PSICHIC oracle to score binding affinity.
+    Best molecules per block/epoch earn rewards.
+
+  mission: "Accelerate drug discovery through decentralized virtual screening"
+
+# ===========================================================================
+# MECHANISM OVERVIEW
+# ===========================================================================
+
+mechanism:
+  summary: |
+    Target protein announced for each challenge round.
+    Miners search chemical space (SAVI) and submit candidate molecules.
+    PSICHIC oracle scores binding affinity deterministically.
+    All validators compute identical scores for same submissions.
+    Best-scoring molecules earn emissions.
+
+  flow:
+    challenge_setup:
+      1_target_selection: "Protein target announced (e.g., SERT, DAT)"
+      2_round_duration: "~360 blocks (~72 minutes) per round"
+      3_epoch_structure: "Short epochs within rounds"
+    
+    miner:
+      1_search: "Explore SAVI chemical space (~7.5 billion molecules)"
+      2_optimize: "Use ML/heuristics to find promising candidates"
+      3_submit: "Send molecule as SMILES string"
+      4_replace: "Can improve submission within epoch"
+    
+    validator:
+      1_receive: "Get miner molecule submissions"
+      2_score: "Run PSICHIC oracle for binding affinity"
+      3_rank: "Identify top-scoring molecule per block"
+      4_aggregate: "Track performance across round"
+      5_set_weights: "Submit weights via Yuma Consensus"
+
+# ===========================================================================
+# PSICHIC ORACLE
+# ===========================================================================
+
+oracle:
+  name: "PSICHIC"
+  full_name: "Physicochemical Graph Neural Network"
+  type: deterministic
+  
+  key_feature: |
+    DETERMINISTIC scoring - all validators compute identical
+    scores for the same protein-molecule pair. Ensures objectivity
+    and eliminates validator subjectivity.
+
+  inputs:
+    protein: "Amino acid sequence (no 3D structure required)"
+    molecule: "SMILES string"
+  
+  outputs:
+    binding_affinity: "Predicted binding score"
+    interpretability:
+      - residue_importance: "Which protein residues matter"
+      - atom_importance: "Which molecule atoms matter"
+  
+  advantages:
+    - sequence_only: "No 3D structure needed"
+    - fast: "Quick inference"
+    - interpretable: "Explains predictions"
+    - deterministic: "Same input = same output always"
+  
+  fine_tuning:
+    example: "TREAT-1 for monoamine transporters (DAT, SERT, NET)"
+    improvement: "~79% enrichment over baseline"
+
+# ===========================================================================
+# SAVI CHEMICAL SPACE
+# ===========================================================================
+
+chemical_space:
+  name: "SAVI (Synthetically Accessible Virtual Inventory)"
+  
+  versions:
+    SAVI_2020:
+      size: "~1.75 billion molecules"
+      type: "Enumerated library"
+    
+    SAVI_Space_2024:
+      size: "~7.5 billion molecules"
+      type: "Fragment-space encoding"
+      storage: "~1.4 GB compressed"
+  
+  key_property: |
+    All molecules are SYNTHESIZABLE - generated via expert-system
+    reaction transforms from real building blocks (Enamine).
+    Hits can actually be made in a lab.
+  
+  search_tools:
+    SpaceLight: "Fast fingerprint similarity search"
+    SpaceMACS: "Fast substructure search"
+
+# ===========================================================================
+# SCORING EVOLUTION (V2 → V3)
+# ===========================================================================
+
+scoring_versions:
+  V1:
+    metric: "Pure binding affinity to target"
+    molecules_per_submission: single
+  
+  V2_shannon_upgrade:
+    release: "April 2025"
+    changes:
+      - multi_molecule: "Multiple molecules per submission"
+      - adversarial_targets: "Randomized target/anti-target assignments"
+      - frequency_adjusted: "Novel scaffolds rewarded more"
+      - diversity: "Shannon entropy over submitted molecules"
+      - fingerprints: "MACCS key fingerprints for similarity"
+  
+  V3:
+    release: "May 2025"
+    changes:
+      - epoch_based: "Short epochs with weekly target locks"
+      - batch_size: "100 molecules per epoch required"
+      - duplicate_invalidation: "Hard rejection of duplicates within target-week"
+      - anti_target_penalty: "Explicit differential scoring"
+      - entropy_decay: "Early diversity gets bigger bonus"
+    
+    scoring_formula: |
+      Score = f(target_affinity) - w * f(anti_target_affinity) 
+              + diversity_bonus + entropy_bonus(time_decay)
+
+# ===========================================================================
+# ANTI-GAMING PROPERTIES
+# ===========================================================================
+
+anti_gaming:
+  deterministic_oracle:
+    mechanism: "PSICHIC produces identical scores for identical inputs"
+    benefit: "No validator subjectivity or manipulation"
+  
+  anti_target_penalty:
+    mechanism: "Penalize binding to off-target proteins"
+    benefit: "Forces specificity, not just raw affinity"
+  
+  diversity_requirement:
+    mechanism: "Shannon entropy bonus for diverse submissions"
+    benefit: "Prevents convergence on single scaffold"
+  
+  duplicate_invalidation:
+    mechanism: "Reject molecules already submitted in target-week"
+    benefit: "Forces novel exploration"
+  
+  synthesizability_constraint:
+    mechanism: "SAVI molecules are all synthesizable"
+    benefit: "Hits are actionable in real labs"
+  
+  frequency_adjustment:
+    mechanism: "Less common scaffolds rewarded more"
+    benefit: "Encourages exploration over exploitation"
+
+# ===========================================================================
+# TEMPORAL STRUCTURE
+# ===========================================================================
+
+temporal:
+  block: "~12 seconds"
+  tempo: "360 blocks (~72 minutes)"
+  round: "Aligned with tempo (~1 hour)"
+  epoch: "Sub-divisions within round"
+  
+  competition_cycle:
+    per_block: "Validators identify top-scoring miner"
+    per_round: "Cumulative performance determines rewards"
+    weekly: "Target protein may change"
+  
+  submission_rules:
+    replacement: "Miners can improve submission within epoch"
+    retention: "Only best (highest scoring) candidate kept"
+    timestamp_tiebreak: "Earlier submission wins ties"
+
+# ===========================================================================
+# VALIDATOR CONSENSUS
+# ===========================================================================
+
+consensus:
+  mechanism: yuma_consensus
+  
+  determinism_benefit: |
+    Because PSICHIC is deterministic, all validators should compute
+    identical scores. This makes consensus trivial and eliminates
+    disagreement about miner performance.
+  
+  weight_setting:
+    method: "Validators assign weights based on PSICHIC scores"
+    frequency: "Per tempo (~72 minutes)"
+    commit_reveal: "Optional, to prevent weight copying"
+  
+  reward_split:
+    miners: "~41%"
+    validators_stakers: "~41%"
+    subnet_owner: "~18%"
+
+# ===========================================================================
+# MINER STRATEGY
+# ===========================================================================
+
+miner_strategy:
+  search_approaches:
+    similarity_search: "Find molecules similar to known binders"
+    substructure_search: "Find molecules with key functional groups"
+    de_novo_generation: "Generate novel molecules with ML"
+    scaffold_hopping: "Modify known scaffolds"
+    hybrid: "Combine SAVI search with generative models"
+  
+  optimization_loop:
+    1: "Sample candidates from SAVI or generate"
+    2: "Predict affinity (local model or proxy)"
+    3: "Filter by drug-likeness, synthesizability"
+    4: "Submit top candidates"
+    5: "Observe PSICHIC scores"
+    6: "Update search strategy based on results"
+  
+  submission_format:
+    molecule: "Canonical SMILES string"
+    batch_size: "100 molecules per epoch (V3)"
+
+# ===========================================================================
+# SCIENTIFIC RIGOR
+# ===========================================================================
+
+scientific_rigor:
+  features:
+    - "Real drug targets (proteins with therapeutic relevance)"
+    - "Synthesizable molecules (SAVI guarantees)"
+    - "Interpretable predictions (residue/atom importance)"
+    - "Anti-target specificity (off-target penalties)"
+    - "Diversity requirements (avoid local optima)"
+  
+  real_world_impact:
+    - "Discovered molecules can be synthesized"
+    - "Predictions can guide wet lab experiments"
+    - "Crowdsourced screening of billion-molecule space"
+
+# ===========================================================================
+# COMPARISON TO OTHER PATTERNS
+# ===========================================================================
+
+pattern_comparison:
+  vs_prediction_market:
+    similarity: "Miners make predictions (molecule quality)"
+    difference: "Deterministic oracle, not delayed ground truth"
+  
+  vs_compute_auction:
+    similarity: "Miners provide compute for search"
+    difference: "Quality scoring on scientific merit"
+  
+  unique_aspects:
+    - "Deterministic oracle eliminates validator disagreement"
+    - "Scientific domain (drug discovery) with real-world impact"
+    - "Multi-objective scoring (affinity + specificity + diversity)"
+
+# ===========================================================================
+# CONNECTIONS TO KNOWLEDGE BASE
+# ===========================================================================
+
+knowledge_connections:
+  subnet.invariants.yaml:
+    validator_not_controlling_truth: "Oracle is deterministic, objective"
+    open_source_preference: "PSICHIC is open source"
+  
+  prediction_market.yaml:
+    partial_match: "Predictions about molecule quality"
+    deviation: "Immediate deterministic scoring, not delayed"
+  
+  compute_auction.yaml:
+    partial_match: "Miners provide compute for molecular search"
+    deviation: "Quality matters, not just speed/price"
+  
+  incentive.primitives.yaml:
+    commodity_type: "predictions/compute hybrid"
+    verification_method: "direct (deterministic oracle)"
+    scoring_formula: "Affinity - anti-target + diversity + entropy"
+    anti_gaming: "Diversity, duplicates, anti-targets, synthesis"
+  
+  design_flow.yaml:
+    commodity: predictions
+    ground_truth: "Deterministic oracle (PSICHIC)"
+    pattern: "Unique - scientific oracle scoring"
+
+# ===========================================================================
+# LESSONS LEARNED
+# ===========================================================================
+
+lessons:
+  deterministic_oracle_power:
+    insight: |
+      When ground truth can be computed deterministically,
+      all validators agree. This eliminates consensus disputes
+      and makes scoring objective.
+    applies_to: "Subnets with computable ground truth"
+  
+  multi_objective_scoring:
+    insight: |
+      Drug discovery requires multiple objectives: affinity,
+      specificity, diversity, synthesizability. Multi-objective
+      scoring prevents gaming via single-metric optimization.
+    applies_to: "Any subnet with complex quality requirements"
+  
+  domain_specific_constraints:
+    insight: |
+      Using domain knowledge (SAVI synthesizability, MACCS
+      fingerprints, anti-target proteins) creates scientifically
+      meaningful incentives.
+    applies_to: "Scientific or technical subnets"
+  
+  diversity_incentives:
+    insight: |
+      Entropy bonuses and duplicate rejection force exploration
+      of chemical space rather than clustering around local optima.
+    applies_to: "Search/optimization subnets"
+  
+  real_world_impact:
+    insight: |
+      SAVI ensures all hits are synthesizable. This closes the
+      loop between virtual screening and wet lab validation.
+    applies_to: "Subnets connecting to physical world"
+
+# ===========================================================================
+# QUICK REFERENCE
+# ===========================================================================
+
+quick_reference:
+  measuring: "Molecule binding affinity to target proteins"
+  pattern: "Deterministic oracle scoring with scientific rigor"
+  miner_provides: "Molecules (SMILES) from SAVI chemical space"
+  validator_does: "Runs PSICHIC oracle, scores deterministically"
+  oracle: "PSICHIC - deterministic, interpretable, sequence-only"
+  novel_mechanism: "Multi-objective scientific scoring (affinity + specificity + diversity)"
+  key_invariant: "Deterministic oracle ensures all validators agree"

@@ -1,0 +1,451 @@
+# Example: Hippius / The Brain (SN75)
+# Decentralized storage and compute marketplace
+# Pattern: capacity_market with multi-dimensional scoring
+
+metadata:
+  name: hippius
+  codename: "The Brain"
+  subnet: 75
+  repo: "https://github.com/thenervelab/thebrain"
+  developer: "The Nerve Lab"
+  category: infrastructure
+  patterns_used:
+    - capacity_market   # always-on infrastructure
+  license: "GPL-3.0"
+
+# ===========================================================================
+# WHAT IS BEING MEASURED
+# ===========================================================================
+
+measurement:
+  one_sentence: "Decentralized storage and compute infrastructure quality"
+  commodity: availability  # always-on infrastructure
+  
+  detail: |
+    Multiple miner types provide storage (IPFS) and compute (GPU/VM).
+    Validators verify uptime, performance, and resource availability.
+    Weights based on 6-dimensional scoring with bonuses/penalties.
+
+  mission: "Provide decentralized alternative to cloud storage and compute"
+
+# ===========================================================================
+# MECHANISM OVERVIEW
+# ===========================================================================
+
+mechanism:
+  summary: |
+    Storage miners provide IPFS pinning with triple redundancy.
+    Compute miners provide GPU/VM resources for tasks.
+    Validators monitor uptime, verify challenges, collect metrics.
+    Weights calculated from 6 dimensions: availability, performance,
+    reliability, capacity, network, geographic diversity.
+
+  flow:
+    storage_miner:
+      1_register: "Register node with IPFS peer ID on chain"
+      2_pin: "Store and pin files assigned by system"
+      3_replicate: "Maintain triple redundancy"
+      4_respond: "Answer pin checks and challenges"
+      5_earn: "Rewards based on storage used + metrics"
+    
+    compute_miner:
+      1_register: "Register node with system specs"
+      2_benchmark: "Execute performance benchmarks"
+      3_accept_tasks: "Receive compute jobs from marketplace"
+      4_execute: "Run VMs, containers, GPU tasks"
+      5_earn: "Rewards based on compute used + metrics"
+    
+    validator:
+      1_monitor: "Track miner uptime and availability"
+      2_challenge: "Issue pin checks and performance tests"
+      3_collect_metrics: "Gather data via off-chain workers"
+      4_score: "Calculate weights from 6 dimensions"
+      5_enforce: "Slash/blacklist malicious actors"
+      6_set_weights: "Submit weights to chain"
+
+# ===========================================================================
+# MINER TYPES
+# ===========================================================================
+
+miner_types:
+  storage_miner:
+    role: "Provide IPFS-based file storage"
+    requirements:
+      - ipfs_node: "Running IPFS daemon"
+      - storage: "Disk space for pinned files"
+      - uptime: "High availability required"
+    
+    responsibilities:
+      - pin_files: "Store and maintain file pins"
+      - respond_to_checks: "Answer validator pin queries"
+      - maintain_health: "Keep files available and healthy"
+    
+    verification:
+      method: "Pin checks via validators"
+      redundancy: "Triple redundancy (3 miners per file)"
+      recovery: "Auto-reassignment if miner fails"
+  
+  compute_miner:
+    role: "Provide GPU/CPU compute resources"
+    requirements:
+      - gpu: "NVIDIA GPU (various tiers)"
+      - cpu: "Multi-core CPU"
+      - memory: "Sufficient RAM"
+      - network: "Low latency connectivity"
+    
+    responsibilities:
+      - accept_tasks: "Handle compute job assignments"
+      - run_vms: "Execute virtual machines"
+      - report_specs: "Submit system specifications"
+      - benchmark: "Complete performance benchmarks"
+    
+    verification:
+      method: "Benchmarks + task completion metrics"
+      specs_check: "Validator verifies claimed hardware"
+  
+  gpu_miner:
+    role: "Specialized GPU compute"
+    inherits: compute_miner
+    focus: "GPU-intensive workloads"
+
+# ===========================================================================
+# STORAGE SYSTEMS
+# ===========================================================================
+
+storage:
+  ipfs_storage:
+    description: "Content-addressed decentralized storage"
+    addressing: "CID-based (content hash)"
+    redundancy: "Triple (3 miners minimum)"
+    integrity: "Hash-based verification"
+    recovery: "Auto-reassignment on failure"
+    
+    pinning:
+      tracked_on_chain: true
+      validator_monitored: true
+      health_checks: "Regular pin verification"
+  
+  s3_compatible:
+    description: "Bucket/object storage (Amazon S3 API)"
+    endpoint: "https://s3.hippius.com"
+    features:
+      - buckets: "Container for objects"
+      - objects: "Files with keys"
+      - acls: "Access control lists"
+      - multipart: "Large file uploads"
+    
+    use_cases:
+      - mutable_data: "Unlike IPFS, can update"
+      - private_content: "ACL-controlled access"
+      - standard_workflows: "Drop-in S3 replacement"
+    
+    access:
+      keys: "hip_* prefix for access keys"
+      authentication: "Standard S3 signing"
+
+# ===========================================================================
+# WEIGHT CALCULATION
+# ===========================================================================
+
+weight_calculation:
+  scale: "16-bit (1-65535)"
+  
+  base_components:
+    availability:
+      weight: 35%
+      measures:
+        - pin_check_success_rate
+        - response_frequency
+        - long_term_behavior
+    
+    performance:
+      weight: 20%
+      measures:
+        - latency
+        - bandwidth
+        - proof_generation_efficiency
+    
+    reliability:
+      weight: 15%
+      measures:
+        - uptime
+        - challenge_success_rate
+        - stability_over_time
+    
+    capacity:
+      weight: 15%
+      measures:
+        - storage_used_vs_total
+        - growth_rate
+        - free_space_distribution
+    
+    network:
+      weight: 10%
+      measures:
+        - peer_count
+        - network_latency
+        - connection_reliability
+    
+    geographic_diversity:
+      weight: 5%
+      purpose: "Reward underrepresented regions"
+      benefit: "Ensures decentralization"
+  
+  modifiers:
+    bonuses:
+      max: "+30%"
+      examples:
+        - high_uptime_streak
+        - fast_response_times
+        - geographic_uniqueness
+    
+    penalties:
+      max: "-80%"
+      examples:
+        - failed_challenges
+        - downtime
+        - under_utilization
+    
+    additional_factors:
+      - network_scaling_factor
+      - relative_position_factor
+
+# ===========================================================================
+# REWARDS MODEL
+# ===========================================================================
+
+rewards:
+  token: "Alpha (α)"
+  
+  model_evolution:
+    old: "Flat emission per epoch"
+    new: "Usage-based emission"
+    
+  usage_based:
+    principle: |
+      Rewards proportional to actual usage:
+      - Storage: per GB stored and retrieved
+      - Compute: per VM hour, GPU hour used
+    
+    excess_handling: "Unused emissions burned"
+    oracle: "USD price feed for value anchoring"
+  
+  factors:
+    - weight_score: "From 6-dimension calculation"
+    - actual_usage: "Storage/compute consumed"
+    - performance_multipliers: "Bonuses/penalties"
+
+# ===========================================================================
+# VALIDATOR INFRASTRUCTURE
+# ===========================================================================
+
+validator:
+  responsibilities:
+    - monitor_miners: "Track uptime and availability"
+    - verify_storage: "Issue pin checks"
+    - verify_compute: "Run benchmarks, check specs"
+    - collect_metrics: "Gather performance data"
+    - calculate_weights: "Apply 6-dimension scoring"
+    - enforce_rules: "Slash/blacklist bad actors"
+    - set_weights: "Submit to Bittensor mainnet"
+  
+  off_chain_workers:
+    role: "Gather metrics without on-chain overhead"
+    collects:
+      - pin_check_results
+      - response_times
+      - bandwidth_measurements
+      - uptime_history
+      - challenge_outcomes
+  
+  pallets:
+    rankings: "Calculate and assign node ranks"
+    metagraph: "Validator identity and trust"
+    ipfs_pin: "Track pin status on-chain"
+    compute: "Manage compute jobs and VMs"
+    execution_unit: "Benchmarks and spec verification"
+
+# ===========================================================================
+# SECURITY & GOVERNANCE
+# ===========================================================================
+
+security:
+  blacklisting:
+    mechanism: "Validators can blacklist malicious nodes"
+    criteria: "Repeated failures, fraud, attacks"
+  
+  slashing:
+    mechanism: "Reduce rewards for misbehavior"
+    triggers:
+      - failed_challenges
+      - misreported_specs
+      - data_loss
+      - extended_downtime
+  
+  replication_enforcement:
+    mechanism: "Triple redundancy required"
+    recovery: "Auto-reassign to new miners on failure"
+  
+  verified_communication:
+    mechanism: "Signed messages between nodes"
+    keys: "Hotkey/coldkey authentication"
+
+# ===========================================================================
+# ANTI-GAMING PROPERTIES
+# ===========================================================================
+
+anti_gaming:
+  multi_dimensional_scoring:
+    mechanism: "6 different metrics combined"
+    benefit: "Can't optimize single dimension"
+  
+  usage_based_rewards:
+    mechanism: "Paid for actual usage, not just capacity"
+    benefit: "Idle resources don't earn"
+  
+  geographic_diversity:
+    mechanism: "5% weight for underrepresented regions"
+    benefit: "Prevents centralization in one location"
+  
+  challenge_verification:
+    mechanism: "Random pin checks and benchmarks"
+    benefit: "Must actually store/compute, not just claim"
+  
+  penalty_system:
+    mechanism: "Up to -80% for failures"
+    benefit: "Strong disincentive for unreliability"
+  
+  triple_redundancy:
+    mechanism: "Files stored on 3+ miners"
+    benefit: "No single point of failure"
+
+# ===========================================================================
+# API & INTEGRATION
+# ===========================================================================
+
+api:
+  rpc_endpoints:
+    get_active_nodes_metrics: "Metrics by node type"
+    get_total_node_rewards: "Total rewards per account"
+    get_miners_total_rewards: "Reward summaries by type"
+    get_user_files: "Files owned by user"
+    get_bucket_sizes: "Storage usage per bucket"
+    get_vm_info: "Virtual machine details"
+  
+  s3_integration:
+    endpoint: "https://s3.hippius.com"
+    compatible_with:
+      - aws_cli
+      - boto3
+      - minio_sdk
+    
+    operations:
+      - create_bucket
+      - put_object
+      - get_object
+      - list_objects
+      - set_bucket_policy
+
+# ===========================================================================
+# COMPARISON TO OTHER PATTERNS
+# ===========================================================================
+
+pattern_comparison:
+  vs_capacity_market:
+    perfect_match: "Always-on infrastructure marketplace"
+    similarity: "Usage-based rewards, uptime matters"
+  
+  vs_compute_auction:
+    difference: "Not price-based auction"
+    similarity: "Verified hardware resources"
+  
+  vs_data_indexing:
+    difference: "General storage, not specialized data"
+    similarity: "Validators verify miner storage claims"
+  
+  unique_aspects:
+    - dual_commodity: "Both storage AND compute"
+    - s3_compatibility: "Standard API for adoption"
+    - 6_dimensional_scoring: "Multi-metric weight calculation"
+    - geographic_incentives: "Decentralization built into scoring"
+
+# ===========================================================================
+# CONNECTIONS TO KNOWLEDGE BASE
+# ===========================================================================
+
+knowledge_connections:
+  subnet.invariants.yaml:
+    compute_distribution: "Miners provide infrastructure"
+    open_source_preference: "GPL-3.0 licensed"
+  
+  capacity_market.yaml:
+    pattern_match: "Always-on infrastructure"
+    scoring: "Uptime + usage + performance"
+    verification: "Challenges and pin checks"
+  
+  incentive.primitives.yaml:
+    commodity_type: "availability (storage + compute)"
+    verification_method: "hardware (challenges, benchmarks)"
+    scoring_formula: "6-dimension weighted + modifiers"
+    anti_gaming: "Multi-metric, usage-based, penalties"
+  
+  hippius.integration.yaml:
+    note: "This IS the Hippius subnet documentation"
+    usage: "Other subnets integrate for storage"
+
+# ===========================================================================
+# LESSONS LEARNED
+# ===========================================================================
+
+lessons:
+  multi_dimensional_scoring:
+    insight: |
+      Using 6 weighted dimensions (availability, performance, reliability,
+      capacity, network, diversity) prevents gaming any single metric.
+    applies_to: "Infrastructure subnets with multiple quality aspects"
+  
+  usage_based_rewards:
+    insight: |
+      Shifting from flat emissions to usage-based rewards ensures
+      only actively-used resources earn. Prevents idle capacity farming.
+    applies_to: "Any capacity/infrastructure marketplace"
+  
+  geographic_diversity_incentive:
+    insight: |
+      Including geographic diversity (5%) in scoring incentivizes
+      decentralization and prevents regional concentration.
+    applies_to: "Global infrastructure networks"
+  
+  dual_commodity_challenge:
+    insight: |
+      Providing both storage AND compute requires separate verification
+      mechanisms but can share weight calculation infrastructure.
+    applies_to: "Multi-service infrastructure subnets"
+  
+  s3_compatibility_for_adoption:
+    insight: |
+      Using standard S3 API lowers barrier to adoption.
+      Users can switch from AWS with minimal code changes.
+    applies_to: "Storage subnets seeking enterprise adoption"
+  
+  off_chain_workers:
+    insight: |
+      Using off-chain workers for metrics collection reduces
+      on-chain overhead while still enabling verifiable scoring.
+    applies_to: "High-frequency monitoring subnets"
+
+# ===========================================================================
+# QUICK REFERENCE
+# ===========================================================================
+
+quick_reference:
+  measuring: "Storage and compute infrastructure quality"
+  pattern: "capacity_market with 6-dimensional scoring"
+  miner_types:
+    storage: "IPFS pinning with triple redundancy"
+    compute: "GPU/VM resources for tasks"
+  validator_does: "Monitors uptime, issues challenges, calculates weights"
+  storage_apis: "IPFS + S3-compatible"
+  scoring: "Availability(35%) + Performance(20%) + Reliability(15%) + Capacity(15%) + Network(10%) + Diversity(5%)"
+  novel_mechanism: "Usage-based rewards + geographic diversity incentive"
+  key_invariant: "Multi-dimensional scoring prevents single-metric gaming"

@@ -1,0 +1,355 @@
+# Example: Lium (SN51)
+# Decentralized GPU rental marketplace
+# Pattern: capacity_market with collateral and slashing
+
+metadata:
+  name: lium
+  subnet: 51
+  repo: "https://github.com/Datura-ai/lium-io"
+  developer: "Datura AI"
+  formerly: "Celium"
+  category: gpu_compute
+  patterns_used:
+    - capacity_market  # always-on infrastructure
+    - compute_auction  # competitive pricing
+
+# ===========================================================================
+# WHAT IS BEING MEASURED
+# ===========================================================================
+
+measurement:
+  one_sentence: "GPU compute availability and performance for rental"
+  commodity: compute  # → capacity_market pattern
+  
+  detail: |
+    Miners contribute GPU machines ("executors") to the network.
+    Validators verify hardware specs and performance.
+    Renters lease GPU pods via marketplace.
+    Scoring based on GPU tier + allocation status.
+    Collateral required; slashing for misbehavior.
+
+  mission: "Decentralized peer-to-peer GPU rental marketplace"
+
+# ===========================================================================
+# MECHANISM OVERVIEW
+# ===========================================================================
+
+mechanism:
+  summary: |
+    Miners register GPU executors with collateral deposit.
+    Validators verify hardware specs and uptime.
+    Renters browse marketplace, lease pods for compute.
+    Scoring: GPU tier base score × count + allocation bonus.
+    Misbehavior (offline during rental) triggers slashing.
+
+  flow:
+    miner:
+      1_setup_executor: "Install software, configure GPU node"
+      2_deposit_collateral: "Lock TAO based on GPU specs"
+      3_register: "Join network with hotkey"
+      4_serve_validators: "Respond to verification checks"
+      5_accept_rentals: "Pods allocated to renters"
+      6_maintain_uptime: "Stay online to avoid slashing"
+    
+    validator:
+      1_verify_hardware: "Check GPU specs via SSH/API"
+      2_run_benchmarks: "Test performance (FLOPS, bandwidth)"
+      3_monitor_uptime: "Continuous availability checks"
+      4_score_miners: "GPU tier × count + allocation bonus"
+      5_set_weights: "Submit via Yuma Consensus"
+      6_report_violations: "Flag misbehavior to Trustee"
+    
+    renter:
+      1_browse_pods: "Filter by GPU, price, location, uptime"
+      2_create_pod: "Rent executor for duration"
+      3_transfer_code: "SSH, scp files to pod"
+      4_run_workloads: "ML training, inference, etc."
+      5_terminate: "Stop pod, pay based on usage"
+
+# ===========================================================================
+# EXECUTOR (MINER NODE) REQUIREMENTS
+# ===========================================================================
+
+executor:
+  hardware:
+    cpu: "≥ 4 cores"
+    ram: "≥ 8 GB (16 GB recommended)"
+    storage: "SSD, ≥ 100 GB"
+    network: "≥ 50 Mbps (100+ recommended)"
+    os: "Ubuntu 20.04+ (22.04 recommended)"
+    gpu: "NVIDIA with CUDA support"
+  
+  supported_gpus:
+    tier_1:
+      - "NVIDIA H200"
+      - "NVIDIA H100 80GB HBM3"
+    tier_2:
+      - "NVIDIA H100 80GB PCIe"
+      - "NVIDIA A100-SXM4 80GB"
+    tier_3:
+      - "NVIDIA A100 80GB PCIe"
+      - "NVIDIA RTX 4090"
+      - "Other CUDA GPUs"
+  
+  setup:
+    1_clone_repo: "git clone compute-subnet"
+    2_run_installer: "scripts/install_executor_on_ubuntu.sh"
+    3_configure_env: "Set hotkey, ports, collateral address"
+    4_docker_compose: "docker compose up -d"
+
+# ===========================================================================
+# GPU SCORING
+# ===========================================================================
+
+scoring:
+  gpu_base_scores:
+    NVIDIA_H200: 4.00
+    NVIDIA_H100_HBM3: 3.30
+    NVIDIA_H100_PCIe: 2.80
+    NVIDIA_A100_SXM4_80GB: 1.90
+    NVIDIA_A100_80GB_PCIe: 1.65
+  
+  formula:
+    gpu_score: "base_score × num_gpus (max 8)"
+    normalization: "Scaled so 8 × top GPU = 100 points"
+    allocation_bonus: "+100 points if actively allocated/rented"
+    max_score: 200
+  
+  example:
+    node: "8 × H100 HBM3"
+    base_calculation: "3.30 × 8 = 26.4"
+    normalized: "100 points (reference point)"
+    if_allocated: "100 + 100 = 200 points"
+  
+  weights:
+    mechanism: "Validators submit weights via Yuma Consensus"
+    stake_weighted: "Higher-stake validators have more influence"
+    assignment_strategy: "Miners should serve high-stake validators"
+
+# ===========================================================================
+# COLLATERAL SYSTEM
+# ===========================================================================
+
+collateral:
+  purpose: |
+    Ensures miner reliability. Collateral can be slashed
+    if miner misbehaves (goes offline during rental, fraud).
+  
+  calculation:
+    formula: "Hourly Rate × Num GPUs × 7 days"
+    minimum: "24 hours of rental fees per GPU"
+    denomination: "TAO tokens"
+  
+  deposit:
+    contract: "On-chain collateral contract"
+    requirement: "Must deposit before validators score node"
+  
+  reclaim:
+    process: "Request withdrawal via contract"
+    delay: "Decision timeout period"
+    trustee: "Can deny if node is rented or violated terms"
+
+# ===========================================================================
+# SLASHING CONDITIONS
+# ===========================================================================
+
+slashing:
+  triggers:
+    offline_during_rental:
+      condition: "Executor goes down while pod is rented"
+      consequence: "Collateral forfeited"
+    
+    malicious_behavior:
+      condition: "Fraudulent hardware claims, invalid results"
+      consequence: "Collateral forfeited + deregistration"
+    
+    early_termination:
+      condition: "Remove executor while actively rented"
+      consequence: "Collateral forfeited"
+  
+  process:
+    detection: "Validators monitor uptime and performance"
+    reporting: "Validators flag violations"
+    decision: "Trustee (subnet owner) executes slash"
+  
+  protection:
+    scheduled_maintenance: "Pre-announce downtime to avoid penalties"
+    monitoring: "Dashboard shows executor health status"
+
+# ===========================================================================
+# RENTAL MARKETPLACE
+# ===========================================================================
+
+marketplace:
+  pods:
+    description: "Containerized GPU environments for rent"
+    isolation: "Docker-based resource allocation"
+    access: "SSH, file transfer, direct execution"
+  
+  pricing:
+    unit: "USD per hour"
+    examples:
+      A100_SXM4_8x: "$3.44-$6.88/hr"
+      H100_HBM3_8x: "$8.40/hr"
+    factors: ["GPU type", "Location", "Uptime history"]
+  
+  renter_workflow:
+    browse: "lium ls - filter by specs, price, location"
+    create: "lium up - specify executor, duration"
+    transfer: "lium scp / rsync - upload code/data"
+    execute: "lium exec / ssh - run workloads"
+    terminate: "lium down / scheduled termination"
+
+# ===========================================================================
+# VALIDATOR ASSIGNMENT STRATEGY
+# ===========================================================================
+
+validator_assignment:
+  importance: |
+    Validators have different stake amounts.
+    Higher-stake validators = more reward influence.
+    Miners should strategically assign executors to validators.
+  
+  strategy:
+    goal: "Cover validators holding >50% of total stake"
+    method: "Distribute executors across high-stake validators"
+    benefit: "Maximize reward weighting from evaluations"
+  
+  implementation:
+    per_executor: "Assign to specific validator hotkeys"
+    diversification: "Don't put all eggs in one basket"
+
+# ===========================================================================
+# ANTI-GAMING PROPERTIES
+# ===========================================================================
+
+anti_gaming:
+  hardware_verification:
+    mechanism: "Validators verify GPU specs via SSH/API"
+    benefit: "Cannot fake hardware claims"
+  
+  performance_benchmarks:
+    mechanism: "Run actual compute benchmarks (FLOPS, bandwidth)"
+    benefit: "Must have real performance, not just specs"
+  
+  collateral_requirement:
+    mechanism: "Lock TAO proportional to claimed capacity"
+    benefit: "Financial stake aligns incentives"
+  
+  slashing:
+    mechanism: "Forfeit collateral for misbehavior"
+    benefit: "Strong disincentive for bad actors"
+  
+  uptime_monitoring:
+    mechanism: "Continuous availability checks"
+    benefit: "Cannot be unreliable"
+  
+  allocation_bonus:
+    mechanism: "+100 points for actively rented nodes"
+    benefit: "Rewards actually useful capacity, not idle claims"
+
+# ===========================================================================
+# COMPARISON TO OTHER SUBNETS
+# ===========================================================================
+
+pattern_comparison:
+  vs_hippius:
+    similarity: "Both are capacity markets with infrastructure"
+    difference: "Lium focuses on GPU compute; Hippius on storage + general compute"
+    difference: "Lium has formal collateral/slashing; Hippius uses scoring"
+  
+  vs_compute_auction:
+    similarity: "Both involve GPU compute pricing"
+    difference: "Lium is capacity market (always-on); compute_auction is per-task"
+  
+  vs_capacity_market:
+    alignment: "Perfect match for pattern"
+    implementation: "GPU rental with collateral enforcement"
+
+# ===========================================================================
+# CONNECTIONS TO KNOWLEDGE BASE
+# ===========================================================================
+
+knowledge_connections:
+  subnet.invariants.yaml:
+    validator_only_development: "Validators verify, miners provide capacity"
+    compute_distribution: "Miners provide GPU; validators just verify"
+  
+  capacity_market.yaml:
+    pattern_match: "Always-on infrastructure with usage-based rewards"
+    implementation: "GPU executors available for rental"
+    enforcement: "Collateral + slashing for reliability"
+  
+  incentive.primitives.yaml:
+    commodity_type: "compute (GPU capacity)"
+    verification_method: "direct (hardware verification + benchmarks)"
+    scoring_formula: "GPU tier × count + allocation bonus"
+    anti_gaming: "Collateral, slashing, performance benchmarks"
+  
+  design_flow.yaml:
+    commodity: compute
+    ground_truth: "Hardware specs verifiable"
+    pattern: capacity_market
+
+# ===========================================================================
+# LESSONS LEARNED
+# ===========================================================================
+
+lessons:
+  collateral_for_reliability:
+    insight: |
+      Requiring upfront collateral (7 days of rental value)
+      creates strong financial incentive for reliable service.
+      Miners have "skin in the game" beyond just emissions.
+    applies_to: "Any infrastructure/capacity subnet"
+  
+  slashing_for_accountability:
+    insight: |
+      Clear slashing conditions (offline during rental, fraud)
+      with Trustee enforcement provides deterrent.
+      Must balance severity with fairness (allow scheduled maintenance).
+    applies_to: "Subnets requiring high reliability"
+  
+  gpu_tier_scoring:
+    insight: |
+      Explicit base scores per GPU model (H100=3.30, A100=1.90)
+      creates transparent, predictable reward structure.
+      Miners can calculate ROI before investing in hardware.
+    applies_to: "Hardware-differentiated compute subnets"
+  
+  allocation_bonus:
+    insight: |
+      +100 points for actively rented nodes rewards actual
+      utility, not just claimed capacity. Prevents idle
+      hardware from earning emissions without doing work.
+    applies_to: "Capacity markets with rental models"
+  
+  validator_assignment_strategy:
+    insight: |
+      Miners must strategically assign executors to high-stake
+      validators to maximize rewards. Creates game-theoretic
+      consideration beyond just hardware quality.
+    applies_to: "Multi-validator subnets with stake weighting"
+  
+  marketplace_interface:
+    insight: |
+      User-friendly CLI/UI for renters (lium ls, lium up)
+      makes the network accessible. Good UX drives adoption
+      which drives demand which rewards miners.
+    applies_to: "Consumer-facing compute subnets"
+
+# ===========================================================================
+# QUICK REFERENCE
+# ===========================================================================
+
+quick_reference:
+  measuring: "GPU compute capacity and availability for rental"
+  pattern: "capacity_market with collateral and slashing"
+  miner_provides: "GPU executors (Docker pods) with collateral deposit"
+  validator_does: "Verifies hardware, monitors uptime, scores GPU tier"
+  marketplace: "Renters browse pods, lease by hour, run workloads"
+  scoring: "GPU base score × count + allocation bonus (max 200)"
+  collateral: "Hourly Rate × GPUs × 7 days in TAO"
+  slashing: "Offline during rental, fraud, early termination"
+  novel_mechanism: "Allocation bonus rewards actively-used capacity"
+  key_invariant: "Collateral creates financial accountability beyond emissions"

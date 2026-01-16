@@ -1,0 +1,329 @@
+# Example: Kinitro (SN26)
+# Decentralized embodied intelligence competitions
+# Pattern: container_execution for robotic agent evaluation
+
+metadata:
+  name: kinitro
+  subnet: 26
+  repo: "https://github.com/threetau/kinitro"
+  formerly: "Storb (storage focus, rebranded mid-2025)"
+  category: embodied_intelligence
+  patterns_used:
+    - container_execution  # validators run agent models in simulation
+  benchmark: "MetaWorld (robotic manipulation)"
+
+# ===========================================================================
+# WHAT IS BEING MEASURED
+# ===========================================================================
+
+measurement:
+  one_sentence: "Robotic agent performance on manipulation tasks"
+  commodity: software  # → container_execution pattern
+  
+  detail: |
+    Miners build RL agents that solve robotic manipulation tasks.
+    Validators run agents in MetaWorld simulation environments.
+    Success rate across tasks determines agent quality and emissions.
+
+  mission: "Accelerate robotic intelligence through incentivized competitions"
+
+# ===========================================================================
+# MECHANISM OVERVIEW
+# ===========================================================================
+
+mechanism:
+  summary: |
+    Validators define competition tasks with success metrics and bounties.
+    Miners submit trained RL agents (models + code).
+    Validators evaluate agents in simulation (MetaWorld).
+    Best performers receive emissions based on success rate.
+
+  lifecycle:
+    define:
+      actor: validator
+      action: "Post challenge with task description, metrics, bounty"
+    compete:
+      actor: miner
+      action: "Train agent, submit model + code"
+    validate:
+      actor: validator
+      action: "Run agent in simulation, measure success rate"
+    reward:
+      actor: chain
+      action: "Distribute emissions based on performance weights"
+
+  flow:
+    validator:
+      1_define_task: "Specify manipulation task, success criteria, reward"
+      2_publish: "Make task available to miners"
+      3_collect: "Receive agent submissions"
+      4_evaluate: "Run agents in MetaWorld simulation"
+      5_score: "Measure success rate across episodes"
+      6_verify: "Confirm reproducibility of results"
+      7_set_weights: "Submit weights via Yuma Consensus"
+    
+    miner:
+      1_view_tasks: "See available competition challenges"
+      2_train: "Train RL agent (PPO, SAC, etc.) on task"
+      3_package: "Bundle model weights + inference code"
+      4_submit: "Send agent to validators for evaluation"
+
+# ===========================================================================
+# METAWORLD BENCHMARK
+# ===========================================================================
+
+benchmark:
+  name: "MetaWorld"
+  type: "Multi-task robotic manipulation"
+  source: "Farama Foundation (metaworld.farama.org)"
+  
+  task_suites:
+    MT10:
+      description: "10 manipulation tasks for multi-task learning"
+      tasks:
+        - reach-v3
+        - push-v3
+        - pick-place-v3
+        - door-open-v3
+        - drawer-open-v3
+        - button-press-topdown-v3
+        - peg-insert-side-v3
+        - window-open-v3
+        - sweep-v3
+        - basketball-v3
+    
+    MT50:
+      description: "50 manipulation tasks for broader evaluation"
+      coverage: "Full range of robotic manipulation skills"
+  
+  evaluation:
+    metric: success_rate
+    definition: "Fraction of episodes where task is completed"
+    per_task: "Evaluated per task, then averaged"
+    episodes: "Multiple episodes per task for statistical robustness"
+
+# ===========================================================================
+# AGENT REQUIREMENTS
+# ===========================================================================
+
+agent:
+  interface:
+    input: "Observation from environment (proprioception, goal)"
+    output: "Action (joint velocities/torques)"
+    method: "agent.act(observation) -> action"
+  
+  supported_algorithms:
+    PPO:
+      type: "On-policy"
+      description: "Proximal Policy Optimization"
+    SAC:
+      type: "Off-policy"
+      description: "Soft Actor-Critic with entropy regularization"
+    other:
+      note: "Any algorithm that produces valid actions"
+  
+  implementation:
+    frameworks: ["JAX/Flax", "PyTorch", "TensorFlow"]
+    template: "kinitro-metaworld-agent on HuggingFace"
+  
+  submission_format:
+    model_weights: ".pt, .onnx, pickle, or framework-native"
+    inference_code: "Python module with act() interface"
+    dependencies: "requirements.txt or environment spec"
+    documentation: "README with run instructions"
+
+# ===========================================================================
+# SCORING MECHANISM
+# ===========================================================================
+
+scoring:
+  primary_metric: success_rate
+  
+  calculation:
+    per_task: "success_count / total_episodes"
+    aggregate: "Average success rate across all tasks"
+    multi_task: "MT10 or MT50 average"
+  
+  evaluation_protocol:
+    episodes_per_task: "Multiple (e.g., 50-100)"
+    seeds: "Fixed seeds for reproducibility"
+    unseen_variations: "Some held-out goal positions"
+  
+  weight_smoothing:
+    method: ema
+    purpose: "Smooth performance over time"
+    formula: "B_t = α * ΔB + (1-α) * B_{t-1}"
+    effect: "Consistent performers rewarded over lucky one-offs"
+  
+  verification:
+    reproducibility: "Same model + seeds = same results"
+    validator_consensus: "Multiple validators cross-check"
+
+# ===========================================================================
+# COMPETITION STRUCTURE
+# ===========================================================================
+
+competition:
+  task_definition:
+    by: validator
+    includes:
+      - task_description
+      - success_criteria
+      - evaluation_metrics
+      - bounty_amount
+      - deadline
+  
+  task_examples:
+    challenge_1:
+      task: "Achieve >80% success on MT10"
+      metric: "Average success rate"
+      bounty: "Portion of subnet emissions"
+    
+    challenge_2:
+      task: "Zero-shot generalization to held-out goals"
+      metric: "Success on unseen goal positions"
+      bounty: "Bonus emissions for top performers"
+  
+  progression:
+    note: "Tasks can increase in complexity over time"
+    benefit: "Continuous improvement pressure on agents"
+
+# ===========================================================================
+# ANTI-GAMING PROPERTIES
+# ===========================================================================
+
+anti_gaming:
+  simulation_based_evaluation:
+    mechanism: "Agents run in standardized MetaWorld simulation"
+    benefit: "Reproducible, deterministic evaluation"
+  
+  multi_task_requirement:
+    mechanism: "Must perform across MT10/MT50 tasks"
+    benefit: "Prevents overfitting to single task"
+  
+  held_out_variations:
+    mechanism: "Some goal positions not seen during training"
+    benefit: "Tests generalization, not memorization"
+  
+  reproducibility_verification:
+    mechanism: "Validators cross-check with fixed seeds"
+    benefit: "Cannot fake results"
+  
+  ema_smoothing:
+    mechanism: "Weights smoothed over time"
+    benefit: "Consistent performance matters"
+
+# ===========================================================================
+# VALIDATOR REQUIREMENTS
+# ===========================================================================
+
+validator:
+  responsibilities:
+    - define_tasks
+    - publish_challenges
+    - run_agent_evaluation
+    - score_performance
+    - set_weights
+  
+  infrastructure:
+    simulation: "MetaWorld + MuJoCo physics"
+    compute: "GPU for running agent inference"
+    reproducibility: "Fixed seeds, deterministic physics"
+  
+  consensus:
+    mechanism: yuma_consensus
+    clipping: "Outlier weights clipped"
+    trust: "Validators aligned with consensus earn more"
+
+# ===========================================================================
+# COMPARISON TO OTHER PATTERNS
+# ===========================================================================
+
+pattern_comparison:
+  vs_affine:
+    similarity: "Both evaluate agent/model quality"
+    difference: "Affine uses Pareto across environments; Kinitro uses success rate"
+    difference: "Affine evaluates reasoning; Kinitro evaluates robotic control"
+  
+  vs_numinous:
+    similarity: "Both involve agent code execution"
+    difference: "Numinous does forecasting; Kinitro does robotic manipulation"
+    difference: "Numinous uses Brier Score; Kinitro uses task success rate"
+  
+  vs_container_execution:
+    alignment: "Miners compete on software (agent) quality"
+    implementation: "Validators run agent models in simulation"
+
+# ===========================================================================
+# CONNECTIONS TO KNOWLEDGE BASE
+# ===========================================================================
+
+knowledge_connections:
+  subnet.invariants.yaml:
+    validator_only_development: "Miners submit agents, validators evaluate"
+    open_source_preference: "Agent templates publicly available"
+    compute_distribution: "Validators run simulation, but agents are lightweight"
+  
+  container_execution.yaml:
+    pattern_match: "Miners compete on code/model quality"
+    implementation: "Agents run in simulation sandbox"
+    evaluation: "Objective success rate metric"
+  
+  incentive.primitives.yaml:
+    commodity_type: "software (RL agents)"
+    verification_method: "direct (simulation evaluation)"
+    scoring_formula: "Success rate across tasks + EMA"
+    anti_gaming: "Multi-task, held-out variations, reproducibility"
+  
+  design_flow.yaml:
+    commodity: software
+    ground_truth: "Environment success signal"
+    pattern: container_execution
+
+# ===========================================================================
+# LESSONS LEARNED
+# ===========================================================================
+
+lessons:
+  simulation_as_ground_truth:
+    insight: |
+      Using standardized simulation (MetaWorld) provides objective,
+      reproducible ground truth for evaluation. No subjectivity.
+    applies_to: "Any agent/robotics subnet"
+  
+  multi_task_prevents_overfitting:
+    insight: |
+      Requiring success across multiple tasks (MT10/MT50) prevents
+      agents from overfitting to narrow scenarios.
+    applies_to: "Any multi-task evaluation subnet"
+  
+  competition_structure:
+    insight: |
+      Validator-defined competitions with bounties create clear
+      incentives and allow task complexity to evolve over time.
+    applies_to: "Subnets with evolving challenges"
+  
+  held_out_test_variations:
+    insight: |
+      Using unseen goal positions or scenarios tests generalization,
+      not just memorization of training distribution.
+    applies_to: "Any RL or agent evaluation subnet"
+  
+  reproducibility_as_verification:
+    insight: |
+      Fixed seeds + deterministic simulation allows validators to
+      independently verify miner claims. Cross-checking prevents fraud.
+    applies_to: "Any simulation-based evaluation"
+
+# ===========================================================================
+# QUICK REFERENCE
+# ===========================================================================
+
+quick_reference:
+  measuring: "Robotic agent success rate on MetaWorld manipulation tasks"
+  pattern: "container_execution with simulation-based evaluation"
+  miner_provides: "Trained RL agent (model weights + inference code)"
+  validator_does: "Runs agents in MetaWorld, measures success rate"
+  benchmark: "MetaWorld MT10/MT50"
+  novel_mechanism: "Competition-based task definition with evolving complexity"
+  key_invariant: "Simulation provides objective, reproducible ground truth"
