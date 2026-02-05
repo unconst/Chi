@@ -113,7 +113,6 @@ task_routing:
       - provenance_verification
       - large_file_distribution
 
-<<<<<<< HEAD
   desearch_real_time:
     load:
       - desearch.integration.yaml
@@ -124,11 +123,6 @@ task_routing:
       - agent_context_enrichment
       - event_verification
       - sentiment_analysis
-=======
-  dataverse_social_data:
-    load:
-      - dataverse.integration.yaml
->>>>>>> 51f1cec7a22db85aa7412760f35fc2c5cfc43b69
 
   cli_operations:
     load:
