@@ -38,13 +38,9 @@ files_by_category:
   integrations:
     chutes.integration.yaml: "SN64 LLM inference API"
     basilica.containers.yaml: "container execution for agent subnets"
-<<<<<<< HEAD
-    hippius.integration.yaml: "SN13 decentralized storage, S3/IPFS, provenance"
     desearch.integration.yaml: "SN22 real-time search, Twitter/Reddit/web data"
-=======
     hippius.integration.yaml: "SN75 decentralized storage, S3/IPFS, provenance"
     dataverse.integration.yaml: "SN13 social data API, X and Reddit scraping"
->>>>>>> 51f1cec7a22db85aa7412760f35fc2c5cfc43b69
     sdk.quick_reference.yaml: "Python SDK patterns, token trading"
     btcli.reference.yaml: "CLI command reference"
     local.development.yaml: "local subtensor setup"
