@@ -1,0 +1,432 @@
+# Example: Antigence
+# Immune-inspired anomaly detection subnet for Bittensor
+# Pattern: adversarial_red_blue (detectors as antibodies vs synthetic anomalies)
+#          + external_ground_truth (hidden evaluation datasets with known labels)
+
+metadata:
+  name: antigence
+  subnet: TBD  # not yet registered on mainnet; codebase is v10.2.0-compatible
+  repo_public: "https://github.com/biobitworks/antigence-subnet"  # curated mirror
+  full_name: "Antigence — Verification-as-a-service for AI outputs"
+  category: anomaly_detection
+  status: "codebase shipped; operational validation on Bittensor deferred pending explicit operator approval"
+  patterns_used:
+    - adversarial_red_blue      # antibodies detect non-self signals
+    - data_indexing             # hidden rotating evaluation datasets with ground truth
+    - container_execution       # miners compete on detector code quality (plugin contract)
+  modalities: ["text", "code", "reasoning-traces", "bio-pipeline-outputs"]
+  origin: |
+    Antigence applies the biological immune system's self/non-self discrimination
+    paradigm to AI output verification. Miners act as antibodies: they learn what
+    normal (self) AI outputs look like and flag anomalous (non-self) outputs —
+    hallucinated facts, insecure code, flawed reasoning, or corrupted data.
+    Validators apply selection pressure by testing miners against hidden
+    evaluation datasets with known ground truth, rewarding accuracy and
+    penalizing false positives (modeled as autoimmune responses).
+
+# ===========================================================================
+# WHAT IS BEING MEASURED
+# ===========================================================================
+
+measurement:
+  one_sentence: "Anomaly detection accuracy on AI outputs (non-self) without false-positiving on legitimate outputs (self)"
+  commodity: competitive_detector_models
+
+  detail: |
+    Miners compete to accurately flag anomalous AI outputs across four
+    domain packs: LLM hallucination detection, code security analysis,
+    agent reasoning audit, and bio pipeline verification. The network
+    produces a shared trust score for AI outputs that any downstream
+    Bittensor subnet can consume.
+
+  key_insight: |
+    The immune-system metaphor is not decorative — it's a compact
+    mental model for the reward function: precision is paramount
+    (autoimmunity is a feature, not a bug, so it must be penalized
+    heavily), diversity among detectors matters (monoculture is
+    exploitable), and the network must continuously learn because
+    "non-self" patterns evolve as AI systems evolve.
+
+# ===========================================================================
+# MECHANISM OVERVIEW
+# ===========================================================================
+
+mechanism:
+  summary: |
+    Validators query miners with evaluation samples drawn from hidden
+    datasets that rotate per round. Miners route each sample to a
+    domain-specific detector ensemble (pluggable BaseDetector interface)
+    and return (anomaly_score, confidence, anomaly_type,
+    feature_attribution). Validators compute a composite precision-first
+    reward with calibration, robustness, and diversity bonuses.
+
+  flow:
+    miner:
+      1_fit_on_seed_data: "Learn self-distribution from bundled seed samples"
+      2_receive_challenge: "Validator sends per-miner-unique evaluation samples"
+      3_route: "Route sample to the correct domain-pack detector ensemble"
+      4_detect: "Return (score∈[0,1], confidence∈[0,1], anomaly_type, attribution)"
+      5_update_state: "Persist detector state across restarts (atomic save)"
+
+    validator:
+      1_sync_metagraph: "Read miners and stakes from subtensor chain"
+      2_rotate_dataset: "Select evaluation subset with per-miner unique challenges"
+      3_inject_honeypots: "Add samples with known ground truth; zero-reward on miss"
+      4_query_miners: "Dendrite fan-out via Pydantic Synapse (SDK 10.2.0)"
+      5_validate_responses: "Structural checks before scoring (range, type, field)"
+      6_score_composite: "Precision-first (70/30) + calibration + robustness + diversity"
+      7_audit_weights: "Detect anomalous weight patterns (collusion) before commit"
+      8_set_weights: "EMA update; subtensor.set_weights; Yuma consensus assigns TAO"
+
+# ===========================================================================
+# REWARD FUNCTION — IMMUNE-INSPIRED COMPOSITE
+# ===========================================================================
+
+reward:
+  base_weights:
+    precision: 0.70   # penalize false positives hard (autoimmune cost)
+    recall: 0.30      # but don't let detectors go silent
+
+  additive_bonuses:
+    calibration: 0.10   # ECE-based — confidence must track accuracy
+    robustness: 0.10    # perturbation stability — small input change, small score change
+    diversity: 0.10     # anti-monoculture — cosine similarity penalty for copycats
+
+  honeypot_rule: |
+    Each round contains honeypot samples with known labels. Miners that
+    mis-classify honeypots receive ZERO reward for that round, regardless
+    of composite score. This is the primary anti-gaming primitive.
+
+  policy_layer:
+    default: operator_multiband   # allow / review / block bands (v10 decision)
+    alternatives:
+      - global_threshold
+      - domain_thresholds
+
+  ema:
+    alpha: configurable
+    purpose: "smooth performance over time; consistent performance matters over lucky rounds"
+
+# ===========================================================================
+# FOUR DOMAIN PACKS
+# ===========================================================================
+
+domain_packs:
+  hallucination:
+    target: "LLM outputs — hallucinated facts, unsupported claims, fabricated citations"
+    reference_detectors: "TF-IDF + IsolationForest; sentence-transformers + OCSVM; NegSel-AIS on 10-dim dendritic features"
+    validated_f1: "0.722 (sentence-transformers) → 0.968–1.000 (OCSVM+NegSel ensemble)"
+
+  code_security:
+    target: "Insecure code patterns, injection vectors, backdoors"
+    reference_detectors: "IsolationForest over AST/token features + NegSel"
+
+  agent_reasoning:
+    target: "Chain-of-thought logical consistency, constraint adherence"
+    reference_detectors: "Statistical + semantic scoring over reasoning traces"
+
+  bio_pipeline:
+    target: "Computational biology anomaly detection (corrupted data, flawed pipelines)"
+    reference_detectors: "Domain-specific feature extractors + ensemble"
+
+# ===========================================================================
+# MINER SURFACE — PLUGIN CONTRACT (NOT SINGLE-FILE)
+# ===========================================================================
+
+miner_contract:
+  interface: BaseDetector
+  language: Python 3.10+
+  signature: |
+    class MyDetector(BaseDetector):
+        domain: str
+        def fit(self, samples: list[dict]) -> None: ...
+        async def detect(self, prompt, output, code=None, context=None) -> DetectionResult: ...
+        def get_info(self) -> dict: ...
+
+  hardware_floor: "commodity CPU (consumer GPU optional for neural detectors)"
+  portability_test: "CPU/GPU parity within tolerance is part of v1 requirements"
+
+  note_vs_chi_doctrine: |
+    Upstream Chi's subnet.invariants.yaml says "ONLY write validator.py,
+    NEVER write miner code." Antigence diverges intentionally: miners
+    compete on DETECTOR QUALITY, and the plugin contract is the product
+    surface. Miners bring their own detection models (neural,
+    sentence-transformer-backed, NegSel, OCSVM, custom ensembles) by
+    implementing BaseDetector. This is adjacent to the container_execution
+    pattern, but the contract is a Python ABC not a Docker image.
+
+# ===========================================================================
+# VALIDATOR ARCHITECTURE — MODULAR (NOT SINGLE-FILE)
+# ===========================================================================
+
+validator:
+  entrypoint: "python neurons/validator.py"
+  modules:
+    agreement: "cross-validator consensus checks"
+    calibration: "ECE-based confidence-accuracy alignment scoring"
+    challenge: "per-miner unique challenge selection with rotation"
+    cold_start: "new-miner handling without destabilizing scores"
+    collusion: "cosine-similarity based cartel detection"
+    diversity: "anti-monoculture weighting"
+    evaluation: "sample routing across domain packs"
+    forward: "main query + reward loop"
+    metagraph_monitor: "anomaly detection on registration / stake patterns"
+    microglia: "network-level surveillance; health metrics"
+    perturbation: "robustness testing via small input mutations"
+    reward: "composite reward computation"
+    rotation: "evaluation-dataset rotation per round"
+    scoring: "exact / statistical / semantic scoring modes"
+    weight_audit: "detect anomalous weight patterns before commit"
+
+  deployment:
+    modes: ["docker compose --profile validator", "runner script", "direct python"]
+    state: "atomic save via os.replace; numpy .npz for persistence"
+
+  note_vs_chi_doctrine: |
+    Chi's validator.rules.yaml advises single-file validators. Antigence
+    diverges for scope reasons — the anti-gaming stack (microglia,
+    collusion, weight_audit, perturbation, calibration) each justifies
+    its own module. A single-file validator is the right default for
+    scaffolds; a modular validator is the right shape for a mature
+    subnet with an adversarial threat model.
+
+# ===========================================================================
+# ANTI-GAMING PROPERTIES
+# ===========================================================================
+
+anti_gaming:
+  hidden_rotating_eval:
+    mechanism: "Evaluation datasets rotate per round; validators do not reveal samples ahead of time"
+    acknowledged_leak_risk: |
+      Chi's validator.rules.yaml is explicit: "Secret eval sets WILL leak."
+      Antigence mitigates by layering additional signals (honeypots,
+      perturbation stability, diversity) so that leaked samples alone
+      do not produce rewards — a gaming miner that memorized
+      samples would still fail honeypots and fail perturbation tests.
+
+  per_miner_unique_challenges:
+    mechanism: "Each miner sees a per-UID-deterministic subset; copying another miner's answers is infeasible"
+
+  honeypot_zero_reward:
+    mechanism: "Known-label injection; failing honeypots zeroes the round"
+
+  perturbation_stability:
+    mechanism: "Validators apply small composable input mutations and require score stability"
+    v5_innovation: "XOR-seeded cryptographic RNG ensures mutations are unique per round"
+
+  diversity_penalty:
+    mechanism: "Cosine similarity over miner score vectors; monoculture is penalized"
+
+  collusion_detection:
+    mechanism: "Score-vector clustering; configurable penalty applied pre-weight-commit"
+
+  weight_audit:
+    mechanism: "validator.weight_audit module rejects anomalous weight patterns before on-chain submission"
+
+  cold_start_handling:
+    mechanism: "New miners receive scores via calibrated warmup, not immediate full weight"
+
+# ===========================================================================
+# ON-CHAIN MECHANICS
+# ===========================================================================
+
+chain:
+  sdk: "bittensor==10.2.0 (Pydantic v2 Synapse stack)"
+  miner_commitment: "miners register hotkey; connection info read from metagraph axon endpoints"
+  validator_weight_setting:
+    method: "subtensor.set_weights with version_key from spec_version"
+    ema: "α applied in validator/reward.py; state persisted atomically"
+    commit_reveal: "available but not default (use only if weight-copy proven a problem)"
+
+# ===========================================================================
+# VERIFICATION-AS-A-SERVICE LAYER
+# ===========================================================================
+
+vaas:
+  purpose: "External Bittensor subnets or third parties can consume the trust signal"
+  surface:
+    http_endpoint: "POST /verify — auth + rate-limited; anomaly_score + confidence returned"
+    python_library: "standalone verify() callable for in-process consumers"
+  separation: "API server runs as its own Docker Compose profile, independent of validator"
+
+# ===========================================================================
+# DEPLOYMENT MODES
+# ===========================================================================
+
+deployment:
+  local_mock:
+    purpose: "Evaluate the project, run neurons, develop detectors without funded wallet"
+    command: "python neurons/validator.py --mock --netuid 1"
+
+  testnet:
+    purpose: "Operational validation against Bittensor testnet"
+    status: "SDK-ready; governance-gated — see docs/testnet-setup.md"
+
+  mainnet:
+    status: "Not approved; explicit operator gate"
+
+# ===========================================================================
+# CONNECTIONS TO KNOWLEDGE BASE
+# ===========================================================================
+
+knowledge_connections:
+  subnet.invariants.yaml:
+    validator_not_controlling_truth_PARTIAL: |
+      Antigence uses hidden eval sets — the validator does know ground
+      truth for those samples. Chi warns this is DANGEROUS. Antigence
+      mitigates via honeypots, rotation, perturbation, diversity
+      (layered defenses) — not by moving to red/blue alone.
+    open_source_preference: "Detector contract is public; reference miners are open; domain-pack datasets will be published as they stabilize."
+    compute_distribution_PARTIAL: |
+      Validators do run some scoring compute locally (deterministic
+      modes), but inference-heavy detectors (sentence-transformers)
+      sit on the miner side where compute is already incentivized.
+
+  adversarial_red_blue.yaml:
+    partial_match: |
+      Antigence is not a classical red/blue team subnet (no distinct
+      generator population). But the detectors-vs-synthetic-anomalies
+      framing is spiritually similar and the anti-gaming lessons
+      apply directly.
+
+  data_indexing.yaml:
+    pattern_match: "Hidden-dataset verification with per-sample ground truth"
+
+  container_execution.yaml:
+    partial_match: "Miners compete on code (detectors), but via a Python plugin contract not a Docker image"
+
+  incentive.primitives.yaml:
+    commodity_type: "detector models (software)"
+    verification_method: "direct (immediate scoring against labeled honeypots + rotating hidden samples)"
+    scoring_formula: "precision-first composite + calibration/robustness/diversity"
+    anti_gaming: "layered: honeypots + per-miner unique challenges + perturbation + diversity + weight-audit"
+
+# ===========================================================================
+# COMPARISON TO OTHER SUBNETS
+# ===========================================================================
+
+pattern_comparison:
+  vs_bitmind_sn34:
+    shared: "Both detect synthetic / anomalous content; both use precision-sensitive scoring"
+    different: "BitMind uses explicit generator miner role; Antigence treats 'non-self' as emerging from upstream AI systems the subnet does not control"
+
+  vs_affine_sn120:
+    shared: "Both use multi-dimension scoring (Affine: multi-environment; Antigence: multi-domain-pack)"
+    different: "Affine uses Pareto dominance + winners-take-all; Antigence uses continuous precision-first composite with diversity bonus"
+
+  vs_container_execution_pattern:
+    shared: "Miners compete on code quality"
+    different: "No Docker sandbox evaluation — detectors run in miner process via Python plugin contract"
+
+# ===========================================================================
+# DESIGN DECISIONS — KEY PRIOR-ART CHOICES
+# ===========================================================================
+
+design_decisions:
+  why_immune_metaphor_not_decoration:
+    problem: "Need a compact mental model for a multi-component reward that an operator can reason about under pressure"
+    solution: "False positive = autoimmunity (heavy cost); detector diversity = polyclonal antibody response; microglia = network-level surveillance"
+    tradeoff: "Metaphor must not pretend biology is doing engineering work; precision/recall/calibration math is still math"
+
+  why_precision_first_70_30:
+    problem: "Hallucination/security/reasoning/bio domains all have skewed class distributions where false positives are expensive"
+    solution: "Precision weighted 70/30 over recall in the base reward"
+    validated: "v6.0 OCSVM+NegSel produced F1 0.968–1.000 across all 4 domains"
+
+  why_no_swarm:
+    problem: "v10 investigated multi-agent swarm consensus vs weighted ensemble"
+    gate: "Explicit quantitative NO-GO at Phase 84 (<3% F1 improvement, 4.95–8.39× latency increase)"
+    decision: "Stayed with weighted ensemble + LLM non-determinism hardening"
+
+  why_continuous_scores_discrete_policy:
+    problem: "Detectors should keep information-rich outputs; operators want simple decisions"
+    solution: "Detectors emit calibrated (score, confidence) in [0,1]; operator_multiband policy overlays allow/review/block bands"
+    benefit: "Decouples research (score quality) from operations (decision rule)"
+
+  why_curated_public_mirror_not_direct_visibility:
+    problem: "Private repo contains .planning/ artifacts and pitch documents"
+    solution: "Manifest-driven public mirror with bootstrap-history publish; no private history exposed"
+    decision_reference: "v10 Phase 98-101; v12 Phase 108"
+
+# ===========================================================================
+# OPEN DIRECTIONS (RESEARCH + ENGINEERING)
+# ===========================================================================
+
+open_directions:
+  deterministic_validator_scoring:
+    stub: "Phase 1000 in ROADMAP"
+    source: "QEC replay-identity pattern — frozen dataclasses, canonical serialization, SHA-256 audit chain"
+    motivation: "Byte-identical validator consensus across the network"
+
+  bp_convergence_monitoring:
+    stub: "Phase 1001 in ROADMAP"
+    source: "QEC belief propagation trajectory analysis"
+    motivation: "Detect oscillation (gaming), metastability, and convergence failure in real-time"
+
+  syndrome_based_anomaly_detection:
+    stub: "Phase 1002 in ROADMAP"
+    source: "QEC syndrome decoding"
+    motivation: "Each miner output = 'codeword', deviation = 'syndrome'; formal error-theoretic foundation"
+
+  jepa_surprise_detection:
+    source: "arxiv 2603.19312 — LeWorldModel (Maes, Le Lidec, Scieur, LeCun, Balestriero, 2026-03)"
+    relevance: |
+      LeWM's VoE (violation-of-expectation) evaluation reliably detects
+      physically implausible events in its latent world model. Adapting
+      surprise-over-predicted-next-embedding to LLM output streams is a
+      candidate new detector class. Modality mismatch (pixels→text)
+      requires non-trivial adaptation; spike locally before promoting
+      to the subnet.
+    action: "Local research spike; NOT a subnet change until it beats NegSel+OCSVM on benchmarks"
+
+# ===========================================================================
+# LESSONS LEARNED
+# ===========================================================================
+
+lessons:
+  honeypots_are_the_load_bearing_primitive:
+    insight: "Rotating hidden eval alone is not enough (Chi: 'secret eval sets WILL leak'). Known-label honeypots layered on top produce a zero-reward signal that makes memorization unprofitable."
+
+  detector_ensemble_beats_detector_monoculture:
+    insight: "OCSVM+NegSel (two complementary detectors on shared 10-dim features) outperformed all larger ensembles at v6.0. Don't add detectors past the point of diminishing returns."
+
+  continuous_scores_discrete_policy_prevents_lock_in:
+    insight: "Ship detectors with (score, confidence) in [0,1]; layer operator decisions as policy overlays. Lets you swap decision rules without rebuilding detectors."
+
+  simulation_first_before_live:
+    insight: "v10 Phase 94 decision: complete simulation contract first; live testnet execution is an explicit operator phase. Don't let 'we must be live on mainnet' become an implicit blocker on measurable progress."
+
+  modular_validator_for_mature_subnet:
+    insight: "Chi's 'one validator.py' doctrine is sound for scaffolds. A mature subnet with anti-gaming subsystems (microglia, collusion, weight_audit) justifies per-module files."
+
+# ===========================================================================
+# QUICK REFERENCE
+# ===========================================================================
+
+quick_reference:
+  measuring: "Precision-first anomaly detection on AI outputs across 4 domain packs"
+  pattern: "adversarial_red_blue + data_indexing + container_execution (plugin contract variant)"
+  miner_provides: "Python BaseDetector implementation; domain pack; fit-on-startup + async detect()"
+  validator_does: "Hidden-dataset rotation, honeypot injection, composite scoring, anti-gaming audit, set_weights"
+  novel_mechanisms:
+    - "Immune-inspired composite reward (precision + calibration + robustness + diversity)"
+    - "Per-miner unique challenges deterministic in UID"
+    - "Perturbation stability with cryptographic per-round entropy"
+    - "Microglia network-level surveillance"
+    - "Continuous-first detector outputs with discrete operator policy overlays"
+  key_invariant: "False positive = autoimmunity; precision is non-negotiable"
+
+# ===========================================================================
+# STATUS AS OF 2026-04-21
+# ===========================================================================
+
+status:
+  codebase: "v10.2.0-compatible; 1492 tests pass on public mirror fresh-clone"
+  public_repo: "biobitworks/antigence-subnet (curated mirror; private source)"
+  shipped_milestones: 14
+  current_milestone: "v12.0 Public Repo Validation & Hardening — complete 2026-04-07, verified 2026-04-21"
+  deployment_posture: |
+    Local + mock + testnet-ready. Real testnet execution is an explicit
+    operator-gated phase; not yet taken. Recommendation (Apr 2026):
+    split scientific iteration (local) from operational validation
+    (testnet) — do not conflate them.

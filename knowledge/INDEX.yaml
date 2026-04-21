@@ -66,6 +66,7 @@ files_by_category:
     example.nova_sn68.yaml: "Nova - drug discovery with deterministic oracle"
     example.hippius_sn75.yaml: "Hippius - decentralized storage and compute"
     example.swarm_sn124.yaml: "Swarm - drone autopilot policy competition"
+    example.antigence.yaml: "Antigence - immune-inspired anomaly detection for AI outputs (verification-as-a-service)"
 
 task_routing:
   designing_new_subnet:
@@ -159,6 +160,7 @@ task_routing:
       - example.nova_sn68.yaml
       - example.hippius_sn75.yaml
       - example.swarm_sn124.yaml
+      - example.antigence.yaml
 
 critical_doctrines:
   - "Validator-only development: ONLY write validator.py, NEVER miner code"
