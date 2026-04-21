@@ -14,7 +14,7 @@ metadata:
     - adversarial_red_blue      # antibodies detect non-self signals
     - data_indexing             # hidden rotating evaluation datasets with ground truth
     - container_execution       # miners compete on detector code quality (plugin contract)
-  modalities: ["text", "code", "reasoning-traces", "bio-pipeline-outputs"]
+  modalities: ["text", "code", "reasoning-traces"]
   origin: |
     Antigence applies the biological immune system's self/non-self discrimination
     paradigm to AI output verification. Miners act as antibodies: they learn what
@@ -33,11 +33,13 @@ measurement:
   commodity: competitive_detector_models
 
   detail: |
-    Miners compete to accurately flag anomalous AI outputs across four
+    Miners compete to accurately flag anomalous AI outputs across three
     domain packs: LLM hallucination detection, code security analysis,
-    agent reasoning audit, and bio pipeline verification. The network
-    produces a shared trust score for AI outputs that any downstream
-    Bittensor subnet can consume.
+    and agent reasoning audit. The network produces a shared trust score
+    for AI outputs that any downstream Bittensor subnet can consume.
+    Biological modeling (peptides, k-mers, sequence-level work) is
+    explicitly out of scope for this subnet; it lives in the separate
+    `cellico-bio` project, not in antigence-bittensor.
 
   key_insight: |
     The immune-system metaphor is not decorative — it's a compact
@@ -125,9 +127,9 @@ domain_packs:
     target: "Chain-of-thought logical consistency, constraint adherence"
     reference_detectors: "Statistical + semantic scoring over reasoning traces"
 
-  bio_pipeline:
-    target: "Computational biology anomaly detection (corrupted data, flawed pipelines)"
-    reference_detectors: "Domain-specific feature extractors + ensemble"
+  # Biological modeling (peptides, k-mers, sequence-level work) is OUT OF
+  # SCOPE for antigence-bittensor. Any such experiment belongs in the
+  # separate `cellico-bio` project. This subnet verifies AI outputs only.
 
 # ===========================================================================
 # MINER SURFACE — PLUGIN CONTRACT (NOT SINGLE-FILE)
@@ -329,7 +331,7 @@ design_decisions:
     tradeoff: "Metaphor must not pretend biology is doing engineering work; precision/recall/calibration math is still math"
 
   why_precision_first_70_30:
-    problem: "Hallucination/security/reasoning/bio domains all have skewed class distributions where false positives are expensive"
+    problem: "Hallucination/security/reasoning domains all have skewed class distributions where false positives are expensive"
     solution: "Precision weighted 70/30 over recall in the base reward"
     validated: "v6.0 OCSVM+NegSel produced F1 0.968–1.000 across all 4 domains"
 
