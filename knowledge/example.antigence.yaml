@@ -110,7 +110,7 @@ reward:
     purpose: "smooth performance over time; consistent performance matters over lucky rounds"
 
 # ===========================================================================
-# FOUR DOMAIN PACKS
+# THREE DOMAIN PACKS (bio modeling belongs in cellico-bio, not here)
 # ===========================================================================
 
 domain_packs:
@@ -333,7 +333,7 @@ design_decisions:
   why_precision_first_70_30:
     problem: "Hallucination/security/reasoning domains all have skewed class distributions where false positives are expensive"
     solution: "Precision weighted 70/30 over recall in the base reward"
-    validated: "v6.0 OCSVM+NegSel produced F1 0.968–1.000 across all 4 domains"
+    validated: "v6.0 OCSVM+NegSel produced F1 0.968–1.000 across the AI-output domains measured"
 
   why_no_swarm:
     problem: "v10 investigated multi-agent swarm consensus vs weighted ensemble"
@@ -406,7 +406,7 @@ lessons:
 # ===========================================================================
 
 quick_reference:
-  measuring: "Precision-first anomaly detection on AI outputs across 4 domain packs"
+  measuring: "Precision-first anomaly detection on AI outputs across 3 domain packs (hallucination, code security, agent reasoning)"
   pattern: "adversarial_red_blue + data_indexing + container_execution (plugin contract variant)"
   miner_provides: "Python BaseDetector implementation; domain pack; fit-on-startup + async detect()"
   validator_does: "Hidden-dataset rotation, honeypot injection, composite scoring, anti-gaming audit, set_weights"
