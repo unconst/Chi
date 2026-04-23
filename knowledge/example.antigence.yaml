@@ -39,7 +39,7 @@ measurement:
     for AI outputs that any downstream Bittensor subnet can consume.
     Biological modeling (peptides, k-mers, sequence-level work) is
     explicitly out of scope for this subnet; it lives in the separate
-    `cellico-bio` project, not in antigence-bittensor.
+    `cellico-bio` project, not this subnet (`antigence-subnet`).
 
   key_insight: |
     The immune-system metaphor is not decorative — it's a compact
@@ -128,7 +128,7 @@ domain_packs:
     reference_detectors: "Statistical + semantic scoring over reasoning traces"
 
   # Biological modeling (peptides, k-mers, sequence-level work) is OUT OF
-  # SCOPE for antigence-bittensor. Any such experiment belongs in the
+  # SCOPE for this subnet (`antigence-subnet`). Any such experiment belongs in the
   # separate `cellico-bio` project. This subnet verifies AI outputs only.
 
 # ===========================================================================
