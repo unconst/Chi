@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test-and-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install project dependencies
+        run: uv pip install --system -e .
+
+      - name: Compile core modules
+        run: |
+          python3 -m py_compile validator.py challenge_engine.py simulation_harness.py
+          python3 -m py_compile scripts/*.py
+
+      - name: Run unit tests
+        run: python3 -m unittest -v
+
+      - name: Preflight smoke
+        run: |
+          cp env.example .env
+          python3 scripts/preflight_check.py --root . --env-file .env --json
+
+      - name: Simulation smoke
+        run: |
+          python3 scripts/run_simulation.py --scenario baseline --rounds 20
+          python3 scripts/run_simulation.py --scenario adversarial_heavy --rounds 40
+
+      - name: Tuning workflow CLI smoke
+        run: |
+          python3 scripts/tuning_report.py --help
+          python3 scripts/run_tuning_cycle.py --help
+          python3 scripts/generate_difficulty_patch.py --help
