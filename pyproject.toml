@@ -1,7 +1,7 @@
 [project]
-name = "chi"
+name = "lemma"
 version = "0.1.0"
-description = "Add your description here"
+description = "Bittensor subnet validator for Lean 4 proof verification"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

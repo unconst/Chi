@@ -17,6 +17,12 @@ wheels/
 # Docker volumes
 validator-data/
 
+# Runtime artifacts
+artifacts/
+.logs/
+.ops-cron/
+.pids/
+
 # Bittensor wallets (never commit these!)
 wallets/
 .bittensor/

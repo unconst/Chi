@@ -1,5 +1,5 @@
-# Chi Subnet Validator Docker Image
-# Build: docker build -t chi-validator .
+# Lemma Subnet Validator Docker Image
+# Build: docker build -t lemma-validator .
 # Run: docker-compose up -d
 
 FROM python:3.12-slim
@@ -34,6 +34,11 @@ ENV NETUID=1
 ENV WALLET_NAME=validator
 ENV HOTKEY_NAME=default
 ENV LOG_LEVEL=INFO
+ENV EMA_ALPHA=0.35
+ENV MINER_REQUEST_TIMEOUT=45
+ENV LEAN_TIMEOUT_SECONDS=30
+ENV MAX_RESPONSE_CHARS=16000
+ENV MAX_PROOF_CHARS_FOR_SCORING=12000
 
 # Run the validator
 CMD ["python", "validator.py"]

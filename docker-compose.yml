@@ -1,4 +1,4 @@
-# Chi Subnet Docker Compose
+# Lemma Subnet Docker Compose
 #
 # For Validators: Use this file to run the validator with auto-updates
 #
@@ -13,12 +13,12 @@
 services:
   validator:
     # For production: use the Docker Hub image
-    # image: your-dockerhub-username/chi-subnet:latest
+    # image: your-dockerhub-username/lemma-subnet:latest
     
     # For development: build locally
     build: .
     
-    container_name: chi-validator
+    container_name: lemma-validator
     restart: unless-stopped
     
     # Load environment variables from .env file
@@ -36,6 +36,26 @@ services:
       
       # Logging
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - EMA_ALPHA=${EMA_ALPHA:-0.35}
+      - MINER_REQUEST_TIMEOUT=${MINER_REQUEST_TIMEOUT:-45}
+      - LEAN_TIMEOUT_SECONDS=${LEAN_TIMEOUT_SECONDS:-30}
+      - MAX_RESPONSE_CHARS=${MAX_RESPONSE_CHARS:-16000}
+      - MAX_PROOF_CHARS_FOR_SCORING=${MAX_PROOF_CHARS_FOR_SCORING:-12000}
+      - MAX_PROOF_LINES=${MAX_PROOF_LINES:-300}
+      - MAX_IMPORT_LINES=${MAX_IMPORT_LINES:-4}
+      - CHALLENGE_BATCH_SIZE=${CHALLENGE_BATCH_SIZE:-6}
+      - DIFFICULTY_WEIGHTING_ENABLED=${DIFFICULTY_WEIGHTING_ENABLED:-true}
+      - LEAN_MEMORY_LIMIT_MB=${LEAN_MEMORY_LIMIT_MB:-1024}
+      - COMMITMENT_REFRESH_BLOCKS=${COMMITMENT_REFRESH_BLOCKS:-20}
+      - ROUND_LOG_PATH=${ROUND_LOG_PATH:-data/round_results.jsonl}
+      - EPISTULA_SIGN_REQUESTS=${EPISTULA_SIGN_REQUESTS:-true}
+      - EPISTULA_VERIFY_RESPONSES=${EPISTULA_VERIFY_RESPONSES:-true}
+      - EPISTULA_STRICT_VERIFY=${EPISTULA_STRICT_VERIFY:-true}
+      - EPISTULA_MAX_SKEW_SECONDS=${EPISTULA_MAX_SKEW_SECONDS:-60}
+      - METRICS_ENABLED=${METRICS_ENABLED:-true}
+      - METRICS_HOST=${METRICS_HOST:-0.0.0.0}
+      - METRICS_PORT=${METRICS_PORT:-9109}
+      - MINER_ENDPOINTS=${MINER_ENDPOINTS:-}
     
     volumes:
       # Mount wallet directory (read-only for security)
@@ -44,9 +64,9 @@ services:
       # Persistent storage for validator state/scores
       - validator-data:/app/data
     
-    # Uncomment if your validator serves an axon
-    # ports:
-    #   - "8091:8091"
+    # Metrics endpoint (Prometheus + JSON)
+    ports:
+      - "${METRICS_PORT:-9109}:${METRICS_PORT:-9109}"
     
     # Resource limits - adjust based on your hardware
     deploy:
@@ -97,7 +117,7 @@ services:
       # Uncomment for Slack notifications
       # - WATCHTOWER_NOTIFICATIONS=slack
       # - WATCHTOWER_NOTIFICATION_SLACK_HOOK_URL=${SLACK_WEBHOOK_URL}
-      # - WATCHTOWER_NOTIFICATION_SLACK_IDENTIFIER=${HOSTNAME:-chi-validator}
+      # - WATCHTOWER_NOTIFICATION_SLACK_IDENTIFIER=${HOSTNAME:-lemma-validator}
     
     volumes:
       # Watchtower needs Docker socket access to manage containers
