@@ -1,0 +1,60 @@
+# Lemma local stub miner stack
+#
+# Starts multiple miner stubs on distinct ports so a validator
+# can query several UIDs during local integration testing.
+#
+# Usage:
+#   docker compose -f docker-compose.miner.yml up --build -d
+#   docker compose -f docker-compose.miner.yml logs -f
+
+services:
+  miner-1:
+    build: .
+    container_name: lemma-miner-1
+    command: ["python", "miner_stub.py"]
+    restart: unless-stopped
+    environment:
+      - MINER_HOST=0.0.0.0
+      - MINER_PORT=8080
+      - WALLET_NAME=${MINER1_WALLET_NAME:-default}
+      - HOTKEY_NAME=${MINER1_HOTKEY_NAME:-miner1}
+      - VERIFY_VALIDATOR_EPISTULA=${VERIFY_VALIDATOR_EPISTULA:-false}
+      - EPISTULA_MAX_SKEW_SECONDS=${EPISTULA_MAX_SKEW_SECONDS:-60}
+    volumes:
+      - ~/.bittensor/wallets:/root/.bittensor/wallets:ro
+    ports:
+      - "8081:8080"
+
+  miner-2:
+    build: .
+    container_name: lemma-miner-2
+    command: ["python", "miner_stub.py"]
+    restart: unless-stopped
+    environment:
+      - MINER_HOST=0.0.0.0
+      - MINER_PORT=8080
+      - WALLET_NAME=${MINER2_WALLET_NAME:-default}
+      - HOTKEY_NAME=${MINER2_HOTKEY_NAME:-miner2}
+      - VERIFY_VALIDATOR_EPISTULA=${VERIFY_VALIDATOR_EPISTULA:-false}
+      - EPISTULA_MAX_SKEW_SECONDS=${EPISTULA_MAX_SKEW_SECONDS:-60}
+    volumes:
+      - ~/.bittensor/wallets:/root/.bittensor/wallets:ro
+    ports:
+      - "8082:8080"
+
+  miner-3:
+    build: .
+    container_name: lemma-miner-3
+    command: ["python", "miner_stub.py"]
+    restart: unless-stopped
+    environment:
+      - MINER_HOST=0.0.0.0
+      - MINER_PORT=8080
+      - WALLET_NAME=${MINER3_WALLET_NAME:-default}
+      - HOTKEY_NAME=${MINER3_HOTKEY_NAME:-miner3}
+      - VERIFY_VALIDATOR_EPISTULA=${VERIFY_VALIDATOR_EPISTULA:-false}
+      - EPISTULA_MAX_SKEW_SECONDS=${EPISTULA_MAX_SKEW_SECONDS:-60}
+    volumes:
+      - ~/.bittensor/wallets:/root/.bittensor/wallets:ro
+    ports:
+      - "8083:8080"
