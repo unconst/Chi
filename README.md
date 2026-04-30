@@ -29,6 +29,18 @@ Lemma is a Bittensor subnet for formal theorem proving in Lean 4.
 5. Or run with Docker:
    - `docker compose up --build -d`
 
+## Preflight Check
+
+- Script: `scripts/preflight_check.py`
+- Purpose: verify environment and filesystem readiness before validator launch.
+- Example:
+  - `python3 scripts/preflight_check.py --root . --env-file .env --require-lean`
+- Optional metrics check:
+  - `python3 scripts/preflight_check.py --metrics-url http://127.0.0.1:9109/metrics.json`
+- Exit code:
+  - `0` when all required checks pass
+  - `2` when any required check fails
+
 ## Local integration test
 
 1. Start a stub miner:
@@ -227,6 +239,13 @@ Lemma is a Bittensor subnet for formal theorem proving in Lean 4.
 - Optionally apply in place (explicit opt-in):
   - `python3 scripts/generate_difficulty_patch.py --apply`
 
+### Difficulty Rollback
+
+- Script: `scripts/rollback_difficulty.sh`
+- Purpose: reverse an applied `difficulty.patch` safely.
+- Example:
+  - `./scripts/rollback_difficulty.sh artifacts/tuning/<timestamp>/difficulty.patch`
+
 ## Replayable Simulation Harness
 
 - Module: `simulation_harness.py`
@@ -250,3 +269,34 @@ Lemma is a Bittensor subnet for formal theorem proving in Lean 4.
   - `python3 scripts/run_simulation.py --scenario baseline --json`
 - Tunable knobs:
   - `--seed`, `--rounds`, `--batch-size`, `--ema-alpha`, `--start-block`
+
+## One-Command Local Ops
+
+- Start validator + metrics watch + tuning loop (+ optional stub miners):
+  - `./scripts/start_local_ops.sh`
+- Stop all local ops processes:
+  - `./scripts/stop_local_ops.sh`
+- Useful env overrides:
+  - `NETWORK`, `NETUID`
+  - `TAIL_ROWS` (default `5000`)
+  - `TUNING_SLEEP_SECONDS` (default `3600`)
+  - `START_MINERS=true|false`
+
+### Runtime Retention
+
+- Script: `scripts/prune_runtime_artifacts.sh`
+- Purpose: remove old tuning artifacts/logs to keep disk usage bounded.
+- Example:
+  - `KEEP_TUNING_DAYS=14 KEEP_LOG_DAYS=7 ./scripts/prune_runtime_artifacts.sh`
+
+## Post-Soak Go/No-Go
+
+- Script: `scripts/post_soak_report.py`
+- Purpose: evaluate last N minutes of logs + live metrics and return pass/fail.
+- Example:
+  - `python3 scripts/post_soak_report.py --log data/round_results.jsonl --metrics-url http://127.0.0.1:9109/metrics.json --minutes 60`
+- JSON output:
+  - `python3 scripts/post_soak_report.py --json`
+- Exit code:
+  - `0` when pass
+  - `2` when fail (useful for CI/cron gates)
