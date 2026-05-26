@@ -2,7 +2,7 @@
 
 benefits:
   - free_tao_via_faucet
-  - fast_blocks_6_seconds
+  - fast_blocks_4_per_second
   - isolated_environment
   - full_chain_control
   - easy_debugging
@@ -39,7 +39,7 @@ starting_subtensor:
       --name subtensor-local \
       -p 9944:9944 \
       -p 9933:9933 \
-      opentensor/subtensor-localnet:latest
+      ghcr.io/opentensor/subtensor-localnet:devnet-ready
 
 connection:
   cli: "btcli subnet list --network local"
@@ -82,18 +82,24 @@ subnet_creation:
       --no-prompt
     
     # SDK:
-    success, netuid = subtensor.register_network(wallet=owner)
+    resp = subtensor.register_subnet(wallet=owner)
+    assert resp.success, resp.message
+    # register_subnet does not return the new netuid; look it up via owner_hotkey:
+    owned = [s for s in subtensor.all_subnets()
+             if s.owner_hotkey == owner.hotkey.ss58_address]
+    netuid = max(owned, key=lambda s: s.network_registered_at).netuid
+    # On a fresh localnet, a fresh netuid will be likely 2, not 1
 
   step_2_configure: |
-    btcli sudo set --netuid 1 --param tempo --value 10 --wallet.name owner --network local
-    btcli sudo set --netuid 1 --param max_allowed_uids --value 64 --wallet.name owner --network local
+    btcli sudo set --netuid 2 --param tempo --value 10 --wallet.name owner --network local
+    btcli sudo set --netuid 2 --param max_allowed_uids --value 64 --wallet.name owner --network local
 
   step_3_register_neurons: |
-    btcli subnet register --netuid 1 --wallet.name miner --wallet.hotkey default --network local
-    btcli subnet register --netuid 1 --wallet.name validator --wallet.hotkey default --network local
+    btcli subnet register --netuid 2 --wallet.name miner --wallet.hotkey default --network local
+    btcli subnet register --netuid 2 --wallet.name validator --wallet.hotkey default --network local
 
   step_4_stake_validator: |
-    btcli stake add --netuid 1 --wallet.name validator --wallet.hotkey default --amount 1000 --network local
+    btcli stake add --netuid 2 --wallet.name validator --wallet.hotkey default --amount 1000 --network local
 
 local_miner_example: |
   from fastapi import FastAPI, Request
@@ -115,8 +121,8 @@ local_miner_example: |
       return {"status": "ok"}
   
   if __name__ == "__main__":
-      if not subtensor.is_hotkey_registered(1, wallet.hotkey.ss58_address):
-          subtensor.burned_register(wallet=wallet, netuid=1)
+      if not subtensor.is_hotkey_registered(wallet.hotkey.ss58_address, 2):
+          subtensor.burned_register(wallet=wallet, netuid=2)
       uvicorn.run(app, host="0.0.0.0", port=8091)
 
 local_validator_example: |
@@ -127,7 +133,7 @@ local_validator_example: |
   
   wallet = Wallet(name="validator")
   subtensor = Subtensor(network="local")
-  metagraph = Metagraph(netuid=1, network="local")
+  metagraph = Metagraph(netuid=2, network="local")
   MINER_ENDPOINTS = {}  # hotkey -> url
   
   async def query_miner(url: str, payload: dict) -> dict | None:
@@ -159,7 +165,7 @@ local_validator_example: |
               total = sum(weights)
               if total > 0:
                   weights = [w / total for w in weights]
-              subtensor.set_weights(wallet=wallet, netuid=1, uids=uids, weights=weights)
+              subtensor.set_weights(wallet=wallet, netuid=2, uids=uids, weights=weights)
           
           await asyncio.sleep(30)
   
@@ -167,13 +173,13 @@ local_validator_example: |
 
 debugging:
   metagraph_state: |
-    metagraph = Metagraph(netuid=1, network="local")
+    metagraph = Metagraph(netuid=2, network="local")
     metagraph.sync()
     for uid in range(metagraph.n):
         print(f"UID {uid}: {metagraph.hotkeys[uid][:16]}... stake={metagraph.S[uid]} incentive={metagraph.I[uid]}")
 
   chain_state: |
-    btcli subnet show --netuid 1 --network local
+    btcli subnet show --netuid 2 --network local
     btcli wallet overview --wallet.name miner --network local
 
   logging: |
@@ -200,7 +206,7 @@ common_issues:
     - "inspect metagraph for validator_permit"
   
   slow_blocks:
-    - "normal: ~6 seconds per block"
+    - "normal: ~250ms per block"
     - "if stuck: restart docker container"
 
 full_test_script: |
@@ -227,23 +233,24 @@ full_test_script: |
       for w in [owner, miner, validator]:
           subtensor.faucet(wallet=w)
       
-      # Create subnet
-      if not subtensor.subnet_exists(netuid=1):
-          success, netuid = subtensor.register_network(wallet=owner)
+      # Create subnet (netuid 2 on fresh localnet)
+      if not subtensor.subnet_exists(netuid=2):
+          resp = subtensor.register_subnet(wallet=owner)
+          assert resp.success, resp.message
       
       # Register neurons
       for w in [miner, validator]:
-          if not subtensor.is_hotkey_registered(1, w.hotkey.ss58_address):
-              subtensor.burned_register(wallet=w, netuid=1)
+          if not subtensor.is_hotkey_registered(w.hotkey.ss58_address, 2):
+              subtensor.burned_register(wallet=w, netuid=2)
       
       # Stake validator
       subtensor.add_stake(wallet=validator, hotkey_ss58=validator.hotkey.ss58_address, amount=1000)
       
       # Set weights
-      metagraph = bt.Metagraph(netuid=1, network="local")
+      metagraph = bt.Metagraph(netuid=2, network="local")
       metagraph.sync()
       miner_uid = metagraph.hotkeys.index(miner.hotkey.ss58_address)
-      subtensor.set_weights(wallet=validator, netuid=1, uids=[miner_uid], weights=[1.0])
+      subtensor.set_weights(wallet=validator, netuid=2, uids=[miner_uid], weights=[1.0])
       
       # Wait for epoch
       await asyncio.sleep(120)

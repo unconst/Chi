@@ -18,6 +18,9 @@ files_by_category:
     sybil.realities.yaml: "coldkey NOT sybil-proof, UID pressure"
     trust.assumptions.yaml: "what can/cannot be trusted"
 
+  reference:
+    sdk.quick_reference.yaml: "Python SDK — Subtensor, Wallet, Metagraph, Commitments"
+
   specifications:
     bittensor.core.yaml: "network, tokens, participants, keys, metagraph"
     subnet.lifecycle.yaml: "creation, activation, hyperparameters, epochs"
@@ -38,21 +41,15 @@ files_by_category:
   integrations:
     chutes.integration.yaml: "SN64 LLM inference API"
     basilica.containers.yaml: "container execution for agent subnets"
-<<<<<<< HEAD
-    hippius.integration.yaml: "SN13 decentralized storage, S3/IPFS, provenance"
-    desearch.integration.yaml: "SN22 real-time search, Twitter/Reddit/web data"
-=======
     hippius.integration.yaml: "SN75 decentralized storage, S3/IPFS, provenance"
+    desearch.integration.yaml: "SN22 real-time search, Twitter/Reddit/web data"
     dataverse.integration.yaml: "SN13 social data API, X and Reddit scraping"
->>>>>>> 51f1cec7a22db85aa7412760f35fc2c5cfc43b69
-    sdk.quick_reference.yaml: "Python SDK patterns, token trading"
     btcli.reference.yaml: "CLI command reference"
     local.development.yaml: "local subtensor setup"
     ops.principles.yaml: "deployment, monitoring, operations"
 
   guidance:
     design_flow.yaml: "decision tree for mechanism selection"
-    load_order.yaml: "context loading sequences by task"
 
   example_subnets:
     example.affine_sn120.yaml: "Affine - multi-env Pareto scoring for reasoning models"
@@ -117,7 +114,6 @@ task_routing:
       - provenance_verification
       - large_file_distribution
 
-<<<<<<< HEAD
   desearch_real_time:
     load:
       - desearch.integration.yaml
@@ -128,11 +124,10 @@ task_routing:
       - agent_context_enrichment
       - event_verification
       - sentiment_analysis
-=======
+
   dataverse_social_data:
     load:
       - dataverse.integration.yaml
->>>>>>> 51f1cec7a22db85aa7412760f35fc2c5cfc43b69
 
   cli_operations:
     load:

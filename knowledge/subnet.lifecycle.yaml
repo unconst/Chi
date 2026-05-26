@@ -14,8 +14,7 @@ phases:
     check_cost: "subtensor.get_subnet_burn_cost()"
 
   2_creation:
-    method: "subtensor.register_network(wallet=wallet)"
-    returns: "(success, netuid)"
+    method: "subtensor.register_subnet(wallet=wallet) -> ExtrinsicResponse"
     cost: "dynamic burn/lock"
     limit: "may prune lowest-emission subnet if full"
 
